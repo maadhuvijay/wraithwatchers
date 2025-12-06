@@ -6,7 +6,7 @@ interface NavbarProps {
 
 export default function Navbar({ activePage = 'sightings' }: NavbarProps) {
   return (
-    <nav className="bg-[#305669] text-white px-4 py-3 flex items-center justify-between">
+    <nav className="bg-[#001C30] text-white px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <span className="text-2xl">👻</span>
         <span className="text-xl font-bold">WraithWatchers</span>

@@ -7,10 +7,12 @@ import StatsCards from './components/StatsCards';
 import SightingsMap from './components/SightingsMap';
 import SightingPopup from './components/SightingPopup';
 import SightingsTable from './components/SightingsTable';
+import FilterControlPanel from './components/FilterControlPanel';
 import { Sighting, calculateStats } from './lib/utils';
 
 export default function Home() {
   const [sightings, setSightings] = useState<Sighting[]>([]);
+  const [filteredSightings, setFilteredSightings] = useState<Sighting[]>([]);
   const [stats, setStats] = useState({ averagePerWeek: 0, peakTime: 'N/A', topCity: 'N/A' });
   const [selectedSighting, setSelectedSighting] = useState<Sighting | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +24,7 @@ export default function Home() {
         const csvText = await response.text();
         const parsed = parseCSV(csvText);
         setSightings(parsed);
+        setFilteredSightings(parsed);
         setStats(calculateStats(parsed));
       } catch (error) {
         console.error('Error loading data:', error);
@@ -78,45 +81,55 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF3E1] text-black flex items-center justify-center">
+      <div 
+        className="min-h-screen bg-[#5D5D5D] text-black flex items-center justify-center"
+        style={{
+          backgroundImage: 'url(/ghost3.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundBlendMode: 'overlay'
+        }}
+      >
         <p>Loading sightings...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF3E1] text-black flex flex-col">
+    <div 
+      className="min-h-screen bg-[#5D5D5D] text-black flex flex-col"
+      style={{
+        backgroundImage: 'url(/ghost3.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundBlendMode: 'overlay'
+      }}
+    >
       <Navbar activePage="sightings" />
       
-      <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-4 md:p-8 max-w-7xl mr-auto w-full">
         <div className="flex items-center gap-4 mb-6">
-          <img 
-            src="/ghost3.png" 
-            alt="Medical Ghost Icon" 
-            width={60} 
-            height={60}
-            className="object-contain"
-          />
-          <h1 className="text-3xl font-bold text-[#222222]">Buckeye Sighting Stats</h1>
+          <h1 className="text-3xl font-bold text-[#F79486]">Buckeye Sighting Stats</h1>
         </div>
         <StatsCards stats={stats} />
         
         <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-4 text-[#222222]">Sightings Map</h2>
+          <h2 className="text-2xl font-bold mb-4 text-[#F79486]">Sightings Map</h2>
           <SightingsMap
-            sightings={sightings}
+            sightings={filteredSightings}
             selectedSighting={selectedSighting}
             onMarkerClick={setSelectedSighting}
           />
         </div>
 
-        <div className="mb-6">
-          <button className="w-full bg-gray-700 text-white py-4 rounded-lg mb-4 hover:bg-gray-600 transition-colors">
-            Filter Control Panel
-          </button>
-        </div>
+        <FilterControlPanel 
+          sightings={sightings}
+          onFilterChange={setFilteredSightings}
+        />
 
-        <SightingsTable sightings={sightings} />
+        <SightingsTable sightings={filteredSightings} />
       </main>
 
       {selectedSighting && (

@@ -53,7 +53,7 @@ public/
 
 ## Visual Identity
 
-- **Primary Color**: Deep teal blue (#305669)
+- **Primary Color**: Deep teal blue (#001C30)
 - **Primary Background**: Deep midnight blue (#0A0F1C)
 - **Text**: Soft spectral white (#F4F4F4)
 - **Accent**: Warm orange rim-lighting (#FFB36A)

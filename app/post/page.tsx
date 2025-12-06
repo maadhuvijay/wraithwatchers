@@ -29,45 +29,54 @@ export default function PostSighting() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FAF3E1] text-black flex flex-col">
+    <div 
+      className="min-h-screen bg-[#5D5D5D] text-[#F79486] flex flex-col"
+      style={{
+        backgroundImage: 'url(/ghost3.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundBlendMode: 'overlay'
+      }}
+    >
       <Navbar activePage="post" />
       
       <main className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full">
-        <h1 className="text-3xl font-bold mb-4 text-[#222222]">Post a Sighting</h1>
-        <p className="text-gray-700 mb-6">
+        <h1 className="text-3xl font-bold mb-4 text-[#F79486]">Post a Sighting</h1>
+        <p className="text-[#F79486] mb-6">
           Did you spot a spirit? Post information below so that our community can stand vigilant!
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Date of Sighting</label>
+            <label className="block text-sm font-medium mb-2 text-[#F79486]">Date of Sighting</label>
             <input
               type="date"
               required
               value={formData.date}
               onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg text-black bg-white border border-gray-300"
+              className="w-full px-4 py-2 rounded-lg text-[#F79486] bg-white border border-gray-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Time of Sighting</label>
+            <label className="block text-sm font-medium mb-2 text-[#F79486]">Time of Sighting</label>
             <input
               type="time"
               required
               value={formData.time}
               onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg text-black bg-white border border-gray-300"
+              className="w-full px-4 py-2 rounded-lg text-[#F79486] bg-white border border-gray-300"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Type of Sighting</label>
+            <label className="block text-sm font-medium mb-2 text-[#F79486]">Type of Sighting</label>
             <select
               required
               value={formData.type}
               onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-              className="w-full px-4 py-2 rounded-lg text-black bg-white border border-gray-300"
+              className="w-full px-4 py-2 rounded-lg text-[#F79486] bg-white border border-gray-300"
             >
               <option value="">Select a type</option>
               <option value="White Lady">White Lady</option>
@@ -81,19 +90,19 @@ export default function PostSighting() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Sighting Notes</label>
+            <label className="block text-sm font-medium mb-2 text-[#F79486]">Sighting Notes</label>
             <textarea
               required
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               rows={4}
-              className="w-full px-4 py-2 rounded-lg text-black bg-white border border-gray-300"
+              className="w-full px-4 py-2 rounded-lg text-[#F79486] bg-white border border-gray-300"
               placeholder="Describe what you saw..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-[#F79486]">
               Where Were You Exactly? (Place a Pin)
             </label>
             <LocationMap
@@ -105,7 +114,7 @@ export default function PostSighting() {
 
           <button
             type="submit"
-            className="w-full bg-black text-white py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+            className="w-full bg-black text-[#F79486] py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
           >
             Post Your Sighting
           </button>
