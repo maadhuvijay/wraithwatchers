@@ -718,3 +718,72 @@ The `package.json` file in your workspace root is now valid and should work with
 
 ---
 
+_**User (2025-12-05 21:44Z)**_
+
+## Error Type
+
+Build Error
+
+
+
+## Error Message
+
+Error parsing package.json file
+
+
+
+## Build Output
+
+./Git Local/AI-Accelerator/wraithwatchers/package.json:1:1
+
+Error parsing package.json file
+
+> 1 | ﻿{
+
+    | ^
+
+  2 |   "name": "wraithwatchers",
+
+  3 |   "version": "0.1.0",
+
+  4 |   "private": true,
+
+
+
+package.json is not parseable: invalid JSON: expected value at line 1 column 1
+
+
+
+Next.js version: 16.0.7 (Turbopack)
+
+
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+The error shows a BOM (Byte Order Mark) at the start of the file (`﻿{`). JSON parsers don't accept BOMs. Removing it:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $content = Get-Content package.json -Raw; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content.TrimStart([char]0xFEFF), $utf8NoBom)</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $content = Get-Content package.json -Raw; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content.TrimStart([char]0xFEFF), $utf8NoBom)
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
