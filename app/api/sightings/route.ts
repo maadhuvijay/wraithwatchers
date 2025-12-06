@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabase';
-import { dbRowToSighting } from '@/lib/utils';
+import { createServerSupabase } from '../../lib/supabase';
+import { dbRowToSighting } from '../../lib/utils';
 
 // Convert time string (HH:MM) to time-of-day category
 function timeToTimeOfDay(time: string): string {

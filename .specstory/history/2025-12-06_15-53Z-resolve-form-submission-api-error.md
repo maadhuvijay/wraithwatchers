@@ -772,3 +772,105 @@ The error message should no longer appear, and form submissions should work prop
 
 ---
 
+_**User (2025-12-05 21:44Z)**_
+
+getting build error:
+
+Build Error
+
+
+
+Module not found: Can't resolve '@/lib/supabase'
+
+./Git Local/AI-Accelerator/wraithwatchers/app/api/sightings/route.ts (2:1)
+
+
+
+Module not found: Can't resolve '@/lib/supabase'
+
+  1 | import { NextRequest, NextResponse } from 'next/server';
+
+> 2 | import { createServerSupabase } from '@/lib/supabase';
+
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  3 | import { dbRowToSighting } from '@/lib/utils';
+
+  4 |
+
+  5 | // Convert time string (HH:MM) to time-of-day category
+
+
+
+Import map: aliased to relative './lib/supabase' inside of [project]/Git Local/AI-Accelerator/wraithwatchers
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Fixing the import path. The alias `@/*` maps to the project root, so we should use `@/app/lib/supabase` or a relative path. Updating the import:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixing the import paths. Since the file is at `app/lib/supabase.ts` and the API route is at `app/api/sightings/route.ts`, using relative paths:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -1,5 +1,5 @@
+  import { NextRequest, NextResponse } from 'next/server';
+- import { createServerSupabase } from '@/lib/supabase';
+- import { dbRowToSighting } from '@/lib/utils';
++ import { createServerSupabase } from '../../lib/supabase';
++ import { dbRowToSighting } from '../../lib/utils';
+  
+  // Convert time string (HH:MM) to time-of-day category
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking for linting errors:
+
+
+---
+
