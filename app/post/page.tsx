@@ -64,8 +64,31 @@ export default function PostSighting() {
       // Reverse geocode to get city and state
       const { city, state } = await reverseGeocode(formData.latitude, formData.longitude);
 
-      // API endpoint not available - submissions are currently disabled
-      throw new Error('Form submissions are currently disabled. The API endpoint is not available.');
+      // Submit to API
+      const response = await fetch('/api/sightings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: formData.date,
+          time: formData.time,
+          type: formData.type,
+          notes: formData.notes,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          city: city,
+          state: state,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to submit sighting: ${response.statusText}`);
+      }
+
+      // Success - navigate to confirmation page
+      router.push('/confirmation');
     } catch (err) {
       console.error('Submission error:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit sighting. Please try again.');
