@@ -874,3 +874,35 @@ Checking for linting errors:
 
 ---
 
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/api/sightings/route.ts`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixed the import paths. The issue was that `@/lib/supabase` resolved to `./lib/supabase` from the project root, but the file is at `app/lib/supabase.ts`.
+
+I've updated the imports to use relative paths:
+- `../../lib/supabase` (from `app/api/sightings/route.ts` to `app/lib/supabase.ts`)
+- `../../lib/utils` (from `app/api/sightings/route.ts` to `app/lib/utils.ts`)
+
+The build error should be resolved. The imports now correctly reference the files using relative paths.
+
+---
+
