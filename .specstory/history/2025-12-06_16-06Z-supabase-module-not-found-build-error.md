@@ -622,3 +622,203 @@ Lines added: 16, lines removed: 29
 
 ---
 
+
+Checking if the GET endpoint is used. If not, removing it or updating it to not use Supabase:
+
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "/api/sightings" • 3 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `.\FORM_SUBMISSION_FIX.md` | `### 1. Created API Route (`app/api/sightings/route.ts`)` | L11 |
+| `.\FORM_SUBMISSION_FIX.md` | `3. **Submits form** → Data is sent to `/api/sightings` endpoint` | L43 |
+| `.\app\post\page.tsx` | `const response = await fetch('/api/sightings', \{` | L68 |
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Removing the unused GET endpoint that uses Supabase:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Removing the unused GET endpoint that still references Supabase:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 30
+
+```diff
+@@ -60,34 +60,4 @@
+    }
+  }
+- 
+- // GET endpoint: Fetch all sightings
+- export async function GET() {
+-   try {
+-     const supabase = createServerSupabase();
+- 
+-     const { data, error } = await supabase
+-       .from('ghost_sightings')
+-       .select('*')
+-       .order('date_of_sighting', { ascending: false });
+- 
+-     if (error) {
+-       console.error('Supabase error:', error);
+-       return NextResponse.json(
+-         { error: 'Failed to fetch sightings', details: error.message },
+-         { status: 500 }
+-       );
+-     }
+- 
+-     const sightings = (data || []).map(dbRowToSighting);
+- 
+-     return NextResponse.json({ sightings }, { status: 200 });
+-   } catch (error) {
+-     console.error('API error:', error);
+-     return NextResponse.json(
+-       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+-       { status: 500 }
+-     );
+-   }
+- }
+  
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/api/sightings/route.ts`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking if `supabase.ts` is used elsewhere:
+
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "from.*supabase|import.*supabase" • 5 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `.\FORM_SUBMISSION_FIX.md` | `- **GET endpoint**: Fetches all sightings from Supabase` | L13 |
+| `.\FORM_SUBMISSION_FIX.md` | `- Now fetches sightings from Supabase API first` | L25 |
+| `.\FORM_SUBMISSION_FIX.md` | `5. **Main page** fetches from Supabase and displays all sightings (including new ones)` | L48 |
+| `.\app\lib\supabase.ts` | `import \{ createClient \} from '@supabase/supabase-js';` | L1 |
+| `.\SUPABASE_SETUP.md` | `1. Update your application to read from Supabase instead of CSV` | L132 |
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Verifying the final state of the route file:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Removed Supabase integration from the post sightings functionality.
+
+## Changes Made:
+
+1. **Removed Supabase from POST endpoint** (`app/api/sightings/route.ts`):
+   - Removed the `createServerSupabase` import
+   - Removed the database insert code
+   - The endpoint now validates input and returns a success response without saving to Supabase
+
+2. **Removed unused GET endpoint**:
+   - The GET endpoint that fetched from Supabase has been removed since it wasn't being used (the main page loads from CSV)
+
+The form submission flow still works:
+- Form validation remains
+- Reverse geocoding still works
+- Success response is returned
+- User is redirected to the confirmation page
+- Data is not saved to any database
+
+The `supabase.ts` file remains in the codebase but is no longer used for saving sightings. You can remove it later if needed, or keep it for other purposes.
+
+The form will now submit successfully without requiring Supabase configuration or the `@supabase/supabase-js` package for this functionality.
+
+---
+
