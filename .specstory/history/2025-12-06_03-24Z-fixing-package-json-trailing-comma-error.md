@@ -787,3 +787,158 @@ cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $content = Get-Cont
 
 ---
 
+
+Verifying the BOM is removed and the file is valid:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $bytes = [System.IO.File]::ReadAllBytes("package.json"); $firstBytes = $bytes[0..2] -join ','; Write-Host "First 3 bytes: $firstBytes"; if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { Write-Host "BOM detected!" } else { Write-Host "No BOM - file starts with: $([char]$bytes[0])" }</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $bytes = [System.IO.File]::ReadAllBytes("package.json"); $firstBytes = $bytes[0..2] -join ','; Write-Host "First 3 bytes: $firstBytes"; if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { Write-Host "BOM detected!" } else { Write-Host "No BOM - file starts with: $([char]$bytes[0])" }
+```
+
+```
+First 3 bytes: 123,10,32
+No BOM - file starts with: {
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Removed the BOM (Byte Order Mark) from `package.json`. The file now starts with `{` instead of the BOM character.
+
+The issue was a UTF-8 BOM (`﻿`) at the start of the file, which JSON parsers reject. The file is now saved as UTF-8 without BOM, so it should parse correctly.
+
+Try building again; the error should be resolved. The file is valid JSON and no longer has the BOM character that was causing the parsing error.
+
+---
+
+_**User (2025-12-05 21:44Z)**_
+
+getting another error:
+
+## Error Type
+
+Build Error
+
+
+
+## Error Message
+
+Error evaluating Node.js code
+
+
+
+## Build Output
+
+./Git Local/AI-Accelerator/wraithwatchers/app/globals.css
+
+Error evaluating Node.js code
+
+CssSyntaxError: tailwindcss: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\app\globals.css:1:1: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\package.json (directory description file): SyntaxError: Unexpected token '﻿', "﻿{
+
+  "name"... is not valid JSON
+
+    [at Input.error (turbopack:///[project]/Git Local/AI-Accelerator/wraithwatchers/node_modules/postcss/lib/input.js:135:16)]
+
+    [at Root.error (turbopack:///[project]/Git Local/AI-Accelerator/wraithwatchers/node_modules/postcss/lib/node.js:146:32)]
+
+    [at Object.Once (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+
+    [at process.processTicksAndRejections (node:internal/process/task_queues:103:5)]
+
+    [at async LazyResult.runAsync (turbopack:///[project]/Git Local/AI-Accelerator/wraithwatchers/node_modules/postcss/lib/lazy-result.js:293:11)]
+
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+
+
+Import trace:
+
+  Client Component Browser:
+
+    ./Git Local/AI-Accelerator/wraithwatchers/app/globals.css [Client Component Browser]
+
+    ./Git Local/AI-Accelerator/wraithwatchers/app/layout.tsx [Server Component]
+
+
+
+Next.js version: 16.0.7 (Turbopack)
+
+
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+The BOM is still present. Checking and removing it:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $bytes = [System.IO.File]::ReadAllBytes("package.json"); if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { Write-Host "BOM still present!"; $content = [System.IO.File]::ReadAllText("package.json", [System.Text.Encoding]::UTF8); $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content, $utf8NoBom); Write-Host "BOM removed" } else { Write-Host "No BOM found" }</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $bytes = [System.IO.File]::ReadAllBytes("package.json"); if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { Write-Host "BOM still present!"; $content = [System.IO.File]::ReadAllText("package.json", [System.Text.Encoding]::UTF8); $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content, $utf8NoBom); Write-Host "BOM removed" } else { Write-Host "No BOM found" }
+```
+
+```
+No BOM found
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Reading the file content and removing any BOM character:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $content = [System.IO.File]::ReadAllText("package.json"); if ($content.StartsWith([char]0xFEFF)) { $content = $content.Substring(1); Write-Host "Removed BOM from string" }; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content, $utf8NoBom); Write-Host "File rewritten without BOM"</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $content = [System.IO.File]::ReadAllText("package.json"); if ($content.StartsWith([char]0xFEFF)) { $content = $content.Substring(1); Write-Host "Removed BOM from string" }; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content, $utf8NoBom); Write-Host "File rewritten without BOM"
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
