@@ -180,29 +180,548 @@ Creating the Supabase setup: installing dependencies, creating the upload script
 
 ---
 
-<tool-use data-tool-type="unknown" data-tool-name="search_replace">
-<details>
-<summary>Tool use: **search_replace**</summary>
+<tool-use data-tool-type="write" data-tool-name="search_replace">
 
+<details><summary>Tool use: **search_replace** • Edit file: package.json</summary>
 
-Parameters:
+**Chunk 1**
+Lines added: 1, lines removed: undefined
 
-```json
-{
-  "relativeWorkspacePath": "package.json"
-}
+```diff
+@@ -10,4 +10,5 @@
+    },
+    "dependencies": {
++     "@supabase/supabase-js": "^2.39.3",
+      "next": "16.0.7",
+      "react": "19.2.1",
 ```
-Additional data:
 
-```json
-{
-  "codeblockId": "5a2bafc0-fa2e-4127-a5b8-9ccf9b1b19da"
-}
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: package.json</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 1
+
+```diff
+@@ -7,5 +7,6 @@
+      "build": "next build",
+      "start": "next start",
+-     "lint": "eslint"
++     "lint": "eslint",
++     "upload-csv": "tsx scripts/upload-csv.ts"
+    },
+    "dependencies": {
 ```
-User decision: **accepted**
 
-Status: **loading**
+</details>
 
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: package.json</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -26,4 +26,5 @@
+      "eslint-config-next": "16.0.7",
+      "tailwindcss": "^4",
++     "tsx": "^4.7.1",
+      "typescript": "^5"
+    }
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Creating the SQL migration file, upload script, and documentation:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: supabase/migrations/001_create_ghost_sightings_table.sql</summary>
+
+**Chunk 1**
+Lines added: 51, lines removed: 1
+
+```diff
+@@ -1,1 +1,51 @@
+- 
++ -- Create the ghost_sightings table
++ CREATE TABLE IF NOT EXISTS ghost_sightings (
++   id BIGSERIAL PRIMARY KEY,
++   date_of_sighting DATE NOT NULL,
++   latitude DOUBLE PRECISION NOT NULL,
++   longitude DOUBLE PRECISION NOT NULL,
++   city VARCHAR(255) NOT NULL,
++   state VARCHAR(100) NOT NULL,
++   notes TEXT,
++   time_of_day VARCHAR(50),
++   tag_of_apparition VARCHAR(100),
++   image_link TEXT,
++   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
++   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
++ );
++ 
++ -- Create indexes for better query performance
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_date ON ghost_sightings(date_of_sighting);
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_city ON ghost_sightings(city);
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_state ON ghost_sightings(state);
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_tag ON ghost_sightings(tag_of_apparition);
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_location ON ghost_sightings USING GIST (point(longitude, latitude));
++ 
++ -- Enable Row Level Security (RLS)
++ ALTER TABLE ghost_sightings ENABLE ROW LEVEL SECURITY;
++ 
++ -- Create a policy that allows anyone to read the sightings
++ CREATE POLICY "Allow public read access" ON ghost_sightings
++   FOR SELECT
++   USING (true);
++ 
++ -- Create a policy that allows authenticated users to insert sightings
++ CREATE POLICY "Allow authenticated insert" ON ghost_sightings
++   FOR INSERT
++   WITH CHECK (auth.role() = 'authenticated');
++ 
++ -- Create a function to update the updated_at timestamp
++ CREATE OR REPLACE FUNCTION update_updated_at_column()
++ RETURNS TRIGGER AS $$
++ BEGIN
++   NEW.updated_at = NOW();
++   RETURN NEW;
++ END;
++ $$ LANGUAGE plpgsql;
++ 
++ -- Create a trigger to automatically update updated_at
++ CREATE TRIGGER update_ghost_sightings_updated_at
++   BEFORE UPDATE ON ghost_sightings
++   FOR EACH ROW
++   EXECUTE FUNCTION update_updated_at_column();
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: scripts/upload-csv.ts</summary>
+
+**Chunk 1**
+Lines added: 210, lines removed: 1
+
+```diff
+@@ -1,1 +1,210 @@
+- 
++ import { createClient } from '@supabase/supabase-js';
++ import { readFileSync } from 'fs';
++ import { join } from 'path';
++ import Papa from 'papaparse';
++ 
++ // Load environment variables
++ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
++ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
++ 
++ if (!supabaseUrl || !supabaseServiceKey) {
++   console.error('❌ Missing required environment variables:');
++   console.error('   - NEXT_PUBLIC_SUPABASE_URL');
++   console.error('   - SUPABASE_SERVICE_ROLE_KEY');
++   console.error('\nPlease create a .env.local file with these variables.');
++   process.exit(1);
++ }
++ 
++ // Create Supabase client with service role key for admin operations
++ const supabase = createClient(supabaseUrl, supabaseServiceKey);
++ 
++ interface CSVRow {
++   'Date of Sighting': string;
++   'Latitude of Sighting': string;
++   'Longitude of Sighting': string;
++   'Nearest Approximate City': string;
++   'US State': string;
++   'Notes about the sighting': string;
++   'Time of Day': string;
++   'Tag of Apparition': string;
++   'Image Link': string;
++ }
++ 
++ interface SightingData {
++   date_of_sighting: string;
++   latitude: number;
++   longitude: number;
++   city: string;
++   state: string;
++   notes: string | null;
++   time_of_day: string | null;
++   tag_of_apparition: string | null;
++   image_link: string | null;
++ }
++ 
++ // Helper function to parse date (MM/DD/YYYY format)
++ function parseDate(dateStr: string): string | null {
++   if (!dateStr || dateStr.trim() === '') return null;
++   
++   const parts = dateStr.trim().split('/');
++   if (parts.length !== 3) return null;
++   
++   const month = parts[0].padStart(2, '0');
++   const day = parts[1].padStart(2, '0');
++   const year = parts[2];
++   
++   // Return in YYYY-MM-DD format
++   return &#96;${year}-${month}-${day}&#96;;
++ }
++ 
++ // Helper function to parse coordinate
++ function parseCoordinate(coordStr: string): number | null {
++   if (!coordStr || coordStr.trim() === '') return null;
++   const parsed = parseFloat(coordStr.trim());
++   return isNaN(parsed) ? null : parsed;
++ }
++ 
++ // Convert CSV row to database format
++ function convertToSighting(row: CSVRow): SightingData | null {
++   const date = parseDate(row['Date of Sighting']);
++   const latitude = parseCoordinate(row['Latitude of Sighting']);
++   const longitude = parseCoordinate(row['Longitude of Sighting']);
++   
++   if (!date || latitude === null || longitude === null) {
++     console.warn(&#96;⚠️  Skipping invalid row: Date=${row['Date of Sighting']}, Lat=${row['Latitude of Sighting']}, Lng=${row['Longitude of Sighting']}&#96;);
++     return null;
++   }
++   
++   return {
++     date_of_sighting: date,
++     latitude,
++     longitude,
++     city: row['Nearest Approximate City']?.trim() || '',
++     state: row['US State']?.trim() || '',
++     notes: row['Notes about the sighting']?.trim() || null,
++     time_of_day: row['Time of Day']?.trim() || null,
++     tag_of_apparition: row['Tag of Apparition']?.trim() || null,
++     image_link: row['Image Link']?.trim() || null,
++   };
++ }
++ 
++ async function uploadCSVToSupabase() {
++   console.log('🚀 Starting CSV upload to Supabase...\n');
++   
++   // Read CSV file
++   const csvPath = join(process.cwd(), 'app/data/ghost_sightings_ohio_with_images.csv');
++   console.log(&#96;📂 Reading CSV file: ${csvPath}&#96;);
++   
++   let csvContent: string;
++   try {
++     csvContent = readFileSync(csvPath, 'utf-8');
++   } catch (error) {
++     console.error(&#96;❌ Error reading CSV file: ${error}&#96;);
++     process.exit(1);
++   }
++   
++   // Parse CSV
++   console.log('📊 Parsing CSV data...');
++   const parsed = Papa.parse&lt;CSVRow&gt;(csvContent, {
++     header: true,
++     skipEmptyLines: true,
++     transformHeader: (header) =&gt; header.trim(),
++   });
++   
++   if (parsed.errors.length &gt; 0) {
++     console.warn(&#96;⚠️  CSV parsing warnings:&#96;, parsed.errors);
++   }
++   
++   console.log(&#96;✅ Parsed ${parsed.data.length} rows\n&#96;);
++   
++   // Convert and validate data
++   console.log('🔄 Converting data format...');
++   const sightings: SightingData[] = [];
++   let skippedCount = 0;
++   
++   for (const row of parsed.data) {
++     const sighting = convertToSighting(row);
++     if (sighting) {
++       sightings.push(sighting);
++     } else {
++       skippedCount++;
++     }
++   }
++   
++   console.log(&#96;✅ Converted ${sightings.length} valid sightings&#96;);
++   if (skippedCount &gt; 0) {
++     console.log(&#96;⚠️  Skipped ${skippedCount} invalid rows\n&#96;);
++   } else {
++     console.log();
++   }
++   
++   // Check if table exists and has data
++   console.log('🔍 Checking existing data...');
++   const { count: existingCount } = await supabase
++     .from('ghost_sightings')
++     .select('*', { count: 'exact', head: true });
++   
++   if (existingCount !== null &amp;&amp; existingCount &gt; 0) {
++     console.log(&#96;⚠️  Table already contains ${existingCount} rows.&#96;);
++     console.log('   This script will add new rows. Duplicates may be created if run multiple times.\n');
++   } else {
++     console.log('✅ Table is empty, ready for upload\n');
++   }
++   
++   // Upload in batches
++   const batchSize = 100;
++   let uploadedCount = 0;
++   let errorCount = 0;
++   
++   console.log(&#96;📤 Uploading data in batches of ${batchSize}...\n&#96;);
++   
++   for (let i = 0; i &lt; sightings.length; i += batchSize) {
++     const batch = sightings.slice(i, i + batchSize);
++     const batchNumber = Math.floor(i / batchSize) + 1;
++     const totalBatches = Math.ceil(sightings.length / batchSize);
++     
++     console.log(&#96;   Uploading batch ${batchNumber}/${totalBatches} (${batch.length} rows)...&#96;);
++     
++     const { data, error } = await supabase
++       .from('ghost_sightings')
++       .insert(batch)
++       .select();
++     
++     if (error) {
++       console.error(&#96;   ❌ Error uploading batch ${batchNumber}:&#96;, error.message);
++       errorCount += batch.length;
++     } else {
++       uploadedCount += data?.length || 0;
++       console.log(&#96;   ✅ Successfully uploaded ${data?.length || 0} rows&#96;);
++     }
++   }
++   
++   console.log('\n' + '='.repeat(50));
++   console.log('📊 Upload Summary:');
++   console.log('='.repeat(50));
++   console.log(&#96;✅ Successfully uploaded: ${uploadedCount} rows&#96;);
++   if (errorCount &gt; 0) {
++     console.log(&#96;❌ Failed to upload: ${errorCount} rows&#96;);
++   }
++   if (skippedCount &gt; 0) {
++     console.log(&#96;⚠️  Skipped (invalid data): ${skippedCount} rows&#96;);
++   }
++   console.log('='.repeat(50) + '\n');
++   
++   // Verify upload
++   console.log('🔍 Verifying upload...');
++   const { count: finalCount } = await supabase
++     .from('ghost_sightings')
++     .select('*', { count: 'exact', head: true });
++   
++   console.log(&#96;✅ Total rows in database: ${finalCount}\n&#96;);
++   
++   console.log('🎉 Upload complete!');
++ }
++ 
++ // Run the upload
++ uploadCSVToSupabase().catch((error) =&gt; {
++   console.error('❌ Fatal error:', error);
++   process.exit(1);
++ });
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+Cannot edit files blocked by globalIgnore
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: SUPABASE_SETUP.md</summary>
+
+**Chunk 1**
+Lines added: 138, lines removed: 1
+
+```diff
+@@ -1,1 +1,138 @@
+- 
++ # Supabase Setup Guide
++ 
++ This guide will help you set up Supabase and upload the ghost sightings CSV data to your database.
++ 
++ ## Prerequisites
++ 
++ 1. A Supabase account (sign up at [supabase.com](https://supabase.com))
++ 2. Node.js and npm installed
++ 3. Your project dependencies installed (&#96;npm install&#96;)
++ 
++ ## Step 1: Create a Supabase Project
++ 
++ 1. Go to [app.supabase.com](https://app.supabase.com)
++ 2. Click "New Project"
++ 3. Fill in your project details:
++    - **Name**: WraithWatchers (or your preferred name)
++    - **Database Password**: Create a strong password (save it!)
++    - **Region**: Choose the closest region to your users
++ 4. Wait for the project to be created (this may take a few minutes)
++ 
++ ## Step 2: Get Your Supabase Credentials
++ 
++ 1. In your Supabase project dashboard, go to **Settings** → **API**
++ 2. You'll find:
++    - **Project URL**: Copy this value
++    - **anon/public key**: Copy this value
++    - **service_role key**: Copy this value (⚠️ Keep this secret!)
++ 
++ ## Step 3: Set Up Environment Variables
++ 
++ 1. Copy the example environment file:
++    &#96;&#96;&#96;bash
++    cp .env.local.example .env.local
++    &#96;&#96;&#96;
++ 
++ 2. Open &#96;.env.local&#96; and fill in your Supabase credentials:
++    &#96;&#96;&#96;env
++    NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
++    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
++    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
++    &#96;&#96;&#96;
++ 
++ 3. Save the file (it's already in &#96;.gitignore&#96;, so it won't be committed)
++ 
++ ## Step 4: Create the Database Table
++ 
++ 1. In your Supabase dashboard, go to **SQL Editor**
++ 2. Click "New Query"
++ 3. Copy and paste the contents of &#96;supabase/migrations/001_create_ghost_sightings_table.sql&#96;
++ 4. Click "Run" to execute the migration
++ 5. You should see "Success. No rows returned"
++ 
++ The migration will:
++ - Create the &#96;ghost_sightings&#96; table with all required columns
++ - Add indexes for better query performance
++ - Set up Row Level Security (RLS) policies
++ - Create a trigger to automatically update timestamps
++ 
++ ## Step 5: Upload CSV Data
++ 
++ 1. Make sure you've installed all dependencies:
++    &#96;&#96;&#96;bash
++    npm install
++    &#96;&#96;&#96;
++ 
++ 2. Run the upload script:
++    &#96;&#96;&#96;bash
++    npm run upload-csv
++    &#96;&#96;&#96;
++ 
++ The script will:
++ - Read the CSV file from &#96;app/data/ghost_sightings_ohio_with_images.csv&#96;
++ - Parse and validate all data
++ - Upload the data in batches of 100 rows
++ - Show progress and summary statistics
++ 
++ ## Step 6: Verify the Upload
++ 
++ 1. In your Supabase dashboard, go to **Table Editor**
++ 2. Select the &#96;ghost_sightings&#96; table
++ 3. You should see all your ghost sightings data
++ 
++ You can also run queries in the SQL Editor:
++ &#96;&#96;&#96;sql
++ SELECT COUNT(*) FROM ghost_sightings;
++ SELECT * FROM ghost_sightings LIMIT 10;
++ &#96;&#96;&#96;
++ 
++ ## Troubleshooting
++ 
++ ### Error: "Missing required environment variables"
++ - Make sure your &#96;.env.local&#96; file exists and contains all required variables
++ - Check that the variable names are exactly as shown (case-sensitive)
++ 
++ ### Error: "relation 'ghost_sightings' does not exist"
++ - You need to run the SQL migration first (Step 4)
++ - Go to SQL Editor in Supabase and run the migration file
++ 
++ ### Error: "new row violates row-level security policy"
++ - The migration sets up RLS policies
++ - Make sure you ran the complete migration file
++ - Check that the service role key is being used (for admin operations)
++ 
++ ### Upload script fails
++ - Check that the CSV file exists at &#96;app/data/ghost_sightings_ohio_with_images.csv&#96;
++ - Verify your Supabase credentials are correct
++ - Check the error message for specific details
++ 
++ ## Database Schema
++ 
++ The &#96;ghost_sightings&#96; table has the following structure:
++ 
++ | Column | Type | Description |
++ |--------|------|-------------|
++ | &#96;id&#96; | BIGSERIAL | Primary key (auto-increment) |
++ | &#96;date_of_sighting&#96; | DATE | Date of the sighting |
++ | &#96;latitude&#96; | DOUBLE PRECISION | Latitude coordinate |
++ | &#96;longitude&#96; | DOUBLE PRECISION | Longitude coordinate |
++ | &#96;city&#96; | VARCHAR(255) | Nearest city |
++ | &#96;state&#96; | VARCHAR(100) | US State |
++ | &#96;notes&#96; | TEXT | Notes about the sighting |
++ | &#96;time_of_day&#96; | VARCHAR(50) | Time of day (e.g., "Evening", "Night") |
++ | &#96;tag_of_apparition&#96; | VARCHAR(100) | Type of apparition (e.g., "White Lady", "Orbs") |
++ | &#96;image_link&#96; | TEXT | URL to the sighting image |
++ | &#96;created_at&#96; | TIMESTAMP | When the record was created |
++ | &#96;updated_at&#96; | TIMESTAMP | When the record was last updated |
++ 
++ ## Next Steps
++ 
++ After uploading your data, you can:
++ 
++ 1. Update your application to read from Supabase instead of CSV
++ 2. Add authentication for user-submitted sightings
++ 3. Implement real-time updates for new sightings
++ 4. Add advanced filtering and search capabilities
++ 
++ For more information, see the [Supabase Documentation](https://supabase.com/docs).
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Install Supabase client library
+- [x] Create SQL migration file for database schema
+- [x] Create upload script to import CSV data to Supabase
+- [x] Create environment variables template and documentation
 
 </details>
 </tool-use>
@@ -210,6 +729,619 @@ Status: **loading**
 ---
 
 
+
+---
+
+
+Creating the environment variables template file with a different approach and verifying the upload script:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: env.example</summary>
+
+**Chunk 1**
+Lines added: 15, lines removed: 1
+
+```diff
+@@ -1,1 +1,15 @@
+- 
++ # Supabase Configuration
++ # Get these values from your Supabase project settings:
++ # https://app.supabase.com/project/_/settings/api
++ 
++ # Your Supabase project URL
++ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
++ 
++ # Service Role Key (for server-side operations and migrations)
++ # ⚠️  Keep this secret! Never commit this to version control.
++ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
++ 
++ # Anon/Public Key (for client-side operations)
++ # This is safe to expose in the browser
++ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: scripts/upload-csv.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Installing dependencies and creating a README with quick-start instructions:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm install</summary>
+
+```bash
+npm install
+```
+
+```
+npm : The term 'npm' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At C:\Users\maadh\AppData\Local\Temp\ps-script-6722fffe-29a8-4c5c-b361-315300609ce7.ps1:7 char:1
++ npm install
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (npm:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Creating a quick-start guide and verifying the setup. Fixing a small issue in the upload script to handle the CSV path correctly:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: scripts/upload-csv.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "Where is the CSV file located in the project structure?" • **13** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `README.md` | L68 |
+| `app/page.tsx` | L10-144 |
+| `app/page.tsx` | L144 |
+| `app/lib/loadSightings.ts` | L18 |
+| `app/lib/utils.ts` | L18-104 |
+| `.next/dev/server/chunks/ssr/app_07b9d4e9._.js` | L638-949 |
+| `.next/dev/server/chunks/ssr/app_07b9d4e9._.js` | L397-949 |
+| `package.json` | L31 |
+| `app/lib/utils.ts` | L16 |
+| `.gitignore` | L41 |
+| `app/post/page.tsx` | L126 |
+| `app/components/SightingsTable.tsx` | L5-95 |
+| `app/layout.tsx` | L30 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The CSV file exists in `app/data/`. Creating a summary document and updating the README:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: README.md</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: QUICK_START_SUPABASE.md</summary>
+
+**Chunk 1**
+Lines added: 79, lines removed: 1
+
+```diff
+@@ -1,1 +1,79 @@
+- 
++ # Quick Start: Upload CSV to Supabase
++ 
++ This is a quick reference guide to upload your ghost sightings CSV to Supabase.
++ 
++ ## Prerequisites
++ 
++ - Supabase account ([sign up here](https://supabase.com))
++ - Node.js installed
++ - Dependencies installed (&#96;npm install&#96;)
++ 
++ ## Quick Setup (5 Steps)
++ 
++ ### 1. Install Dependencies
++ &#96;&#96;&#96;bash
++ npm install
++ &#96;&#96;&#96;
++ 
++ ### 2. Create Supabase Project
++ - Go to [app.supabase.com](https://app.supabase.com)
++ - Create a new project
++ - Wait for it to finish setting up
++ 
++ ### 3. Get Your Credentials
++ - In Supabase dashboard: **Settings** → **API**
++ - Copy these values:
++   - Project URL
++   - &#96;service_role&#96; key (keep this secret!)
++   - &#96;anon&#96; key
++ 
++ ### 4. Set Environment Variables
++ Create a &#96;.env.local&#96; file in the project root:
++ 
++ &#96;&#96;&#96;env
++ NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
++ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
++ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
++ &#96;&#96;&#96;
++ 
++ ### 5. Run Database Migration
++ - In Supabase dashboard: **SQL Editor** → **New Query**
++ - Copy contents of &#96;supabase/migrations/001_create_ghost_sightings_table.sql&#96;
++ - Paste and click **Run**
++ 
++ ### 6. Upload CSV Data
++ &#96;&#96;&#96;bash
++ npm run upload-csv
++ &#96;&#96;&#96;
++ 
++ That's it! Your data should now be in Supabase.
++ 
++ ## Verify Upload
++ 
++ In Supabase dashboard:
++ - Go to **Table Editor**
++ - Select &#96;ghost_sightings&#96; table
++ - You should see all your data
++ 
++ Or run this SQL query:
++ &#96;&#96;&#96;sql
++ SELECT COUNT(*) FROM ghost_sightings;
++ &#96;&#96;&#96;
++ 
++ ## Troubleshooting
++ 
++ **Missing environment variables?**
++ - Make sure &#96;.env.local&#96; exists and has all three variables
++ 
++ **Table doesn't exist?**
++ - Run the SQL migration file first (step 5)
++ 
++ **Upload fails?**
++ - Check that CSV file exists at &#96;app/data/ghost_sightings_ohio_with_images.csv&#96;
++ - Verify your credentials are correct
++ - Check the error message for details
++ 
++ ## Full Documentation
++ 
++ For detailed instructions, see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the README to include Supabase setup information and checking the SQL migration:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: supabase/migrations/001_create_ghost_sightings_table.sql</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: README.md</summary>
+
+**Chunk 1**
+Lines added: 14, lines removed: 1
+
+```diff
+@@ -68,8 +68,21 @@
+  - **Leaflet.js**: Interactive maps
+  - **TypeScript**: Type safety
++ 
++ ## Supabase Integration
++ 
++ This project now includes Supabase database integration! Upload your CSV data to Supabase with these steps:
++ 
++ 1. **Quick Start**: See [QUICK_START_SUPABASE.md](./QUICK_START_SUPABASE.md) for a fast setup guide
++ 2. **Full Guide**: See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed instructions
++ 
++ ### Upload CSV to Supabase
++ 
++ &#96;&#96;&#96;bash
++ npm install                    # Install dependencies (including Supabase client)
++ npm run upload-csv            # Upload CSV data to Supabase
++ &#96;&#96;&#96;
+  
+  ## Future Enhancements
+  
+- - Supabase database integration
+  - Real-time sighting submissions
+  - Advanced filtering and search
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: supabase/migrations/001_create_ghost_sightings_table.sql</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -20,5 +20,7 @@
+  CREATE INDEX IF NOT EXISTS idx_ghost_sightings_state ON ghost_sightings(state);
+  CREATE INDEX IF NOT EXISTS idx_ghost_sightings_tag ON ghost_sightings(tag_of_apparition);
+- CREATE INDEX IF NOT EXISTS idx_ghost_sightings_location ON ghost_sightings USING GIST (point(longitude, latitude));
++ -- Note: The spatial index requires PostGIS extension. If you need spatial queries,
++ -- enable PostGIS in your Supabase project first, then uncomment this line:
++ -- CREATE INDEX IF NOT EXISTS idx_ghost_sightings_location ON ghost_sightings USING GIST (point(longitude, latitude));
+  
+  -- Enable Row Level Security (RLS)
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Simplifying the SQL migration by removing the spatial index since it requires PostGIS:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: supabase/migrations/001_create_ghost_sightings_table.sql</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 3
+
+```diff
+@@ -20,7 +20,6 @@
+  CREATE INDEX IF NOT EXISTS idx_ghost_sightings_state ON ghost_sightings(state);
+  CREATE INDEX IF NOT EXISTS idx_ghost_sightings_tag ON ghost_sightings(tag_of_apparition);
+- -- Note: The spatial index requires PostGIS extension. If you need spatial queries,
+- -- enable PostGIS in your Supabase project first, then uncomment this line:
+- -- CREATE INDEX IF NOT EXISTS idx_ghost_sightings_location ON ghost_sightings USING GIST (point(longitude, latitude));
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_latitude ON ghost_sightings(latitude);
++ CREATE INDEX IF NOT EXISTS idx_ghost_sightings_longitude ON ghost_sightings(longitude);
+  
+  -- Enable Row Level Security (RLS)
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Creating a summary document of what we've set up:
+
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory undefined • **0** results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Verifying the CSV path in the upload script is correct:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: scripts/upload-csv.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Path is correct. Creating a summary document:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: SETUP_SUMMARY.md</summary>
+
+**Chunk 1**
+Lines added: 122, lines removed: 1
+
+```diff
+@@ -1,1 +1,122 @@
+- 
++ # Supabase CSV Upload Setup - Summary
++ 
++ ## ✅ What Was Created
++ 
++ I've set up everything you need to upload your &#96;ghost_sightings_ohio_with_images.csv&#96; file to Supabase. Here's what was added to your project:
++ 
++ ### 📁 New Files Created
++ 
++ 1. **&#96;supabase/migrations/001_create_ghost_sightings_table.sql&#96;**
++    - SQL migration file to create the database table
++    - Includes all columns matching your CSV structure
++    - Sets up indexes for better performance
++    - Configures Row Level Security (RLS) policies
++ 
++ 2. **&#96;scripts/upload-csv.ts&#96;**
++    - TypeScript script to upload CSV data to Supabase
++    - Handles data parsing, validation, and batch uploads
++    - Provides progress feedback and error handling
++ 
++ 3. **&#96;SUPABASE_SETUP.md&#96;**
++    - Comprehensive setup guide with step-by-step instructions
++    - Troubleshooting section
++    - Database schema documentation
++ 
++ 4. **&#96;QUICK_START_SUPABASE.md&#96;**
++    - Quick reference guide for fast setup
++    - Essential steps only
++ 
++ 5. **&#96;env.example&#96;**
++    - Template for environment variables
++    - Copy this to &#96;.env.local&#96; and fill in your Supabase credentials
++ 
++ ### 📦 Updated Files
++ 
++ 1. **&#96;package.json&#96;**
++    - Added &#96;@supabase/supabase-js&#96; dependency
++    - Added &#96;tsx&#96; dev dependency (for running TypeScript scripts)
++    - Added &#96;upload-csv&#96; npm script
++ 
++ 2. **&#96;README.md&#96;**
++    - Updated to mention Supabase integration
++    - Added links to setup guides
++ 
++ ## 🚀 Next Steps
++ 
++ ### 1. Install Dependencies
++ &#96;&#96;&#96;bash
++ npm install
++ &#96;&#96;&#96;
++ 
++ ### 2. Set Up Supabase
++ - Create a Supabase account at [supabase.com](https://supabase.com)
++ - Create a new project
++ - Get your credentials from Settings → API
++ 
++ ### 3. Configure Environment Variables
++ Copy &#96;env.example&#96; to &#96;.env.local&#96; and fill in your Supabase credentials:
++ &#96;&#96;&#96;bash
++ cp env.example .env.local
++ &#96;&#96;&#96;
++ 
++ Then edit &#96;.env.local&#96; with your values:
++ &#96;&#96;&#96;env
++ NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
++ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
++ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
++ &#96;&#96;&#96;
++ 
++ ### 4. Run Database Migration
++ - In Supabase dashboard: SQL Editor → New Query
++ - Copy contents of &#96;supabase/migrations/001_create_ghost_sightings_table.sql&#96;
++ - Paste and click Run
++ 
++ ### 5. Upload Your CSV Data
++ &#96;&#96;&#96;bash
++ npm run upload-csv
++ &#96;&#96;&#96;
++ 
++ ## 📊 What the Upload Script Does
++ 
++ 1. ✅ Reads your CSV file from &#96;app/data/ghost_sightings_ohio_with_images.csv&#96;
++ 2. ✅ Parses and validates all data
++ 3. ✅ Converts date format from MM/DD/YYYY to YYYY-MM-DD
++ 4. ✅ Uploads data in batches of 100 rows
++ 5. ✅ Shows progress and summary statistics
++ 6. ✅ Handles errors gracefully
++ 
++ ## 🔍 Database Schema
++ 
++ The &#96;ghost_sightings&#96; table will have these columns:
++ 
++ | Column | Type | Description |
++ |--------|------|-------------|
++ | &#96;id&#96; | BIGSERIAL | Auto-incrementing primary key |
++ | &#96;date_of_sighting&#96; | DATE | Date of the sighting |
++ | &#96;latitude&#96; | DOUBLE PRECISION | Latitude coordinate |
++ | &#96;longitude&#96; | DOUBLE PRECISION | Longitude coordinate |
++ | &#96;city&#96; | VARCHAR(255) | Nearest city |
++ | &#96;state&#96; | VARCHAR(100) | US State |
++ | &#96;notes&#96; | TEXT | Notes about the sighting |
++ | &#96;time_of_day&#96; | VARCHAR(50) | Time of day |
++ | &#96;tag_of_apparition&#96; | VARCHAR(100) | Type of apparition |
++ | &#96;image_link&#96; | TEXT | URL to image |
++ | &#96;created_at&#96; | TIMESTAMP | Record creation time |
++ | &#96;updated_at&#96; | TIMESTAMP | Last update time |
++ 
++ ## 📚 Documentation
++ 
++ - **Quick Start**: See [QUICK_START_SUPABASE.md](./QUICK_START_SUPABASE.md)
++ - **Full Guide**: See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
++ 
++ ## ⚠️ Important Notes
++ 
++ - The service role key is sensitive - never commit it to version control
++ - The &#96;.env.local&#96; file is already in &#96;.gitignore&#96;
++ - The upload script will add new rows - running it multiple times may create duplicates
++ - Make sure to run the SQL migration before uploading data
++ 
++ ## 🎯 Ready to Go!
++ 
++ Once you complete the steps above, your CSV data will be in Supabase and ready to use in your application!
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Summary
+
+Set up everything needed to upload your CSV file to Supabase.
+
+### Files created
+
+1. Database migration: `supabase/migrations/001_create_ghost_sightings_table.sql`
+   - Creates the `ghost_sightings` table matching your CSV structure
+   - Sets up indexes and security policies
+
+2. Upload script: `scripts/upload-csv.ts`
+   - TypeScript script to parse and upload your CSV data
+   - Handles data validation, date conversion, and batch uploads
+
+3. Documentation:
+   - `SUPABASE_SETUP.md` - Complete setup guide
+   - `QUICK_START_SUPABASE.md` - Quick reference
+   - `SETUP_SUMMARY.md` - Overview of what was created
+   - `env.example` - Environment variables template
+
+### Dependencies added
+
+- `@supabase/supabase-js` - Supabase client library
+- `tsx` - TypeScript execution tool
+- New npm script: `npm run upload-csv`
+
+### Next steps
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Set up Supabase:
+   - Create account at [supabase.com](https://supabase.com)
+   - Create a new project
+   - Get credentials from Settings → API
+
+3. Configure environment:
+   - Copy `env.example` to `.env.local`
+   - Fill in your Supabase credentials
+
+4. Run migration:
+   - In Supabase SQL Editor, run the migration file to create the table
+
+5. Upload data:
+   ```bash
+   npm run upload-csv
+   ```
+
+The upload script reads from `app/data/ghost_sightings_ohio_with_images.csv` and uploads all your ghost sightings data to Supabase.
+
+For detailed instructions, see `QUICK_START_SUPABASE.md` or `SUPABASE_SETUP.md`.
 
 ---
 
