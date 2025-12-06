@@ -16,12 +16,61 @@ export default function PostSighting() {
     latitude: 0,
     longitude: 0,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const reverseGeocode = async (lat: number, lng: number): Promise<{ city: string; state: string }> => {
+    try {
+      // Using OpenStreetMap Nominatim API for reverse geocoding
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+        {
+          headers: {
+            'User-Agent': 'WraithWatchers/1.0'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding failed');
+      }
+      
+      const data = await response.json();
+      const address = data.address || {};
+      
+      return {
+        city: address.city || address.town || address.village || address.municipality || 'Unknown',
+        state: address.state || 'Ohio'
+      };
+    } catch (error) {
+      console.warn('Reverse geocoding failed:', error);
+      return { city: 'Unknown', state: 'Ohio' };
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would POST to an API
-    // For now, we'll just navigate to confirmation
-    router.push('/confirmation');
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      // Validate location is selected
+      if (!formData.latitude || !formData.longitude) {
+        setError('Please select a location on the map');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Reverse geocode to get city and state
+      const { city, state } = await reverseGeocode(formData.latitude, formData.longitude);
+
+      // API endpoint not available - submissions are currently disabled
+      throw new Error('Form submissions are currently disabled. The API endpoint is not available.');
+    } catch (err) {
+      console.error('Submission error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to submit sighting. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleLocationSelect = useCallback((lat: number, lng: number) => {
@@ -112,11 +161,18 @@ export default function PostSighting() {
             />
           </div>
 
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-black text-[#F79486] py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
+            disabled={isSubmitting}
+            className="w-full bg-black text-[#F79486] py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Post Your Sighting
+            {isSubmitting ? 'Submitting...' : 'Post Your Sighting'}
           </button>
         </form>
       </main>

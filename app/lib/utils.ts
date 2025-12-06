@@ -104,3 +104,18 @@ export function parseCSV(csvText: string): Sighting[] {
   return sightings;
 }
 
+// Convert database row to Sighting interface
+export function dbRowToSighting(row: any): Sighting {
+  return {
+    date: row.date_of_sighting || '',
+    latitude: row.latitude || 0,
+    longitude: row.longitude || 0,
+    city: row.city || '',
+    state: row.state || '',
+    notes: row.notes || '',
+    timeOfDay: row.time_of_day || '',
+    tag: row.tag_of_apparition || '',
+    imageLink: row.image_link || '',
+  };
+}
+

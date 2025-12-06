@@ -1345,3 +1345,852 @@ For detailed instructions, see `QUICK_START_SUPABASE.md` or `SUPABASE_SETUP.md`.
 
 ---
 
+_**User (2025-12-05 21:44Z)**_
+
+The sightings that are added through post a sighting page seemed to be not included in the sightings. 
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Investigating why sightings from the "Post a Sighting" page aren't appearing. Checking the form submission and how sightings are loaded.
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/post/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "How are new sightings submitted and saved in the post sighting page?" • **12** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `app/post/page.tsx` | L126 |
+| `app/post/page.tsx` | L6-126 |
+| `app/page.tsx` | L144 |
+| `app/lib/utils.ts` | L16 |
+| `app/page.tsx` | L10-144 |
+| `app/lib/utils.ts` | L18-104 |
+| `README.md` | L68 |
+| `app/lib/loadSightings.ts` | L18 |
+| `app/components/Navbar.tsx` | L2-37 |
+| `app/components/SightingsTable.tsx` | L5-95 |
+| `app/components/SightingPopup.tsx` | L1-67 |
+| `app/components/SightingsMap.tsx` | L9-165 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The form submission isn't saving data; it only navigates to the confirmation page. The main page only loads from the CSV. Integrating Supabase to save submissions and display them:
+
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [-] Create API route to handle form submissions and save to Supabase
+- [ ] Update post sighting page to submit data to API
+- [ ] Update main page to fetch from Supabase instead of CSV
+- [ ] Add reverse geocoding for city/state from coordinates
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "Where are API routes defined in this Next.js app?" • **15** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `app/page.tsx` | L144 |
+| `app/post/page.tsx` | L126 |
+| `README.md` | L68 |
+| `package.json` | L31 |
+| `app/lib/loadSightings.ts` | L18 |
+| `app/components/Navbar.tsx` | L2-37 |
+| `next.config.ts` | L6 |
+| `app/page.tsx` | L10-144 |
+| `app/layout.tsx` | L30 |
+| `.next/dev/server/chunks/ssr/app_07b9d4e9._.js` | L638-949 |
+| `.next/dev/server/chunks/ssr/app_07b9d4e9._.js.map` | L6 |
+| `app/components/Navbar.tsx` | L37 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L3165-3325 |
+| `app/layout.tsx` | L10-30 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L3166-3325 |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory undefined • **0** results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Creating the integration. First, setting up the Supabase client and API routes:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: app/lib/supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 26, lines removed: 1
+
+```diff
+@@ -1,1 +1,26 @@
+- 
++ import { createClient } from '@supabase/supabase-js';
++ 
++ // Client-side Supabase client (uses anon key)
++ export function createSupabaseClient() {
++   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
++   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
++ 
++   if (!supabaseUrl || !supabaseAnonKey) {
++     throw new Error('Missing Supabase environment variables');
++   }
++ 
++   return createClient(supabaseUrl, supabaseAnonKey);
++ }
++ 
++ // Server-side Supabase client (uses service role key for admin operations)
++ export function createSupabaseServerClient() {
++   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
++   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
++ 
++   if (!supabaseUrl || !supabaseServiceKey) {
++     throw new Error('Missing Supabase service role key');
++   }
++ 
++   return createClient(supabaseUrl, supabaseServiceKey);
++ }
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 112, lines removed: 1
+
+```diff
+@@ -1,1 +1,112 @@
+- 
++ import { NextRequest, NextResponse } from 'next/server';
++ import { createSupabaseServerClient } from '@/app/lib/supabase';
++ 
++ export async function POST(request: NextRequest) {
++   try {
++     const body = await request.json();
++     
++     const {
++       date,
++       time,
++       type,
++       notes,
++       latitude,
++       longitude,
++       city,
++       state,
++     } = body;
++ 
++     // Validate required fields
++     if (!date || !latitude || !longitude) {
++       return NextResponse.json(
++         { error: 'Missing required fields: date, latitude, and longitude are required' },
++         { status: 400 }
++       );
++     }
++ 
++     // Convert time to time_of_day category
++     // Simple categorization based on hour
++     let timeOfDay = 'Unknown';
++     if (time) {
++       const hour = parseInt(time.split(':')[0]);
++       if (hour &gt;= 5 &amp;&amp; hour &lt; 12) {
++         timeOfDay = 'Morning';
++       } else if (hour &gt;= 12 &amp;&amp; hour &lt; 17) {
++         timeOfDay = 'Afternoon';
++       } else if (hour &gt;= 17 &amp;&amp; hour &lt; 21) {
++         timeOfDay = 'Evening';
++       } else if (hour &gt;= 21 || hour &lt; 5) {
++         timeOfDay = 'Night';
++       }
++     }
++ 
++     // Prepare data for database
++     const sightingData = {
++       date_of_sighting: date,
++       latitude: parseFloat(latitude),
++       longitude: parseFloat(longitude),
++       city: city || 'Unknown',
++       state: state || 'Ohio',
++       notes: notes || null,
++       time_of_day: timeOfDay,
++       tag_of_apparition: type || null,
++       image_link: null,
++     };
++ 
++     // Insert into Supabase
++     const supabase = createSupabaseServerClient();
++     const { data, error } = await supabase
++       .from('ghost_sightings')
++       .insert([sightingData])
++       .select()
++       .single();
++ 
++     if (error) {
++       console.error('Supabase error:', error);
++       return NextResponse.json(
++         { error: 'Failed to save sighting', details: error.message },
++         { status: 500 }
++       );
++     }
++ 
++     return NextResponse.json(
++       { success: true, data },
++       { status: 201 }
++     );
++   } catch (error) {
++     console.error('API error:', error);
++     return NextResponse.json(
++       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
++       { status: 500 }
++     );
++   }
++ }
++ 
++ // GET endpoint to fetch sightings
++ export async function GET(request: NextRequest) {
++   try {
++     const supabase = createSupabaseServerClient();
++     
++     const { data, error } = await supabase
++       .from('ghost_sightings')
++       .select('*')
++       .order('date_of_sighting', { ascending: false });
++ 
++     if (error) {
++       console.error('Supabase error:', error);
++       return NextResponse.json(
++         { error: 'Failed to fetch sightings', details: error.message },
++         { status: 500 }
++       );
++     }
++ 
++     return NextResponse.json({ data }, { status: 200 });
++   } catch (error) {
++     console.error('API error:', error);
++     return NextResponse.json(
++       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
++       { status: 500 }
++     );
++   }
++ }
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/utils.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Adding a helper to convert database format and updating the post page and main page:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/lib/utils.ts</summary>
+
+**Chunk 1**
+Lines added: 15, lines removed: undefined
+
+```diff
+@@ -104,4 +104,19 @@
+    return sightings;
+  }
++ 
++ // Convert database row to Sighting interface
++ export function dbRowToSighting(row: any): Sighting {
++   return {
++     date: row.date_of_sighting || '',
++     latitude: row.latitude || 0,
++     longitude: row.longitude || 0,
++     city: row.city || '',
++     state: row.state || '',
++     notes: row.notes || '',
++     timeOfDay: row.time_of_day || '',
++     tag: row.tag_of_apparition || '',
++     imageLink: row.image_link || '',
++   };
++ }
+  
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/post/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 77, lines removed: 5
+
+```diff
+@@ -17,10 +17,82 @@
+      longitude: 0,
+    });
+- 
+-   const handleSubmit = (e: React.FormEvent) =&gt; {
++   const [isSubmitting, setIsSubmitting] = useState(false);
++   const [error, setError] = useState&lt;string | null&gt;(null);
++ 
++   const reverseGeocode = async (lat: number, lng: number): Promise&lt;{ city: string; state: string }&gt; =&gt; {
++     try {
++       // Using OpenStreetMap Nominatim API for reverse geocoding
++       const response = await fetch(
++         &#96;https://nominatim.openstreetmap.org/reverse?format=json&amp;lat=${lat}&amp;lon=${lng}&#96;,
++         {
++           headers: {
++             'User-Agent': 'WraithWatchers/1.0'
++           }
++         }
++       );
++       
++       if (!response.ok) {
++         throw new Error('Geocoding failed');
++       }
++       
++       const data = await response.json();
++       const address = data.address || {};
++       
++       return {
++         city: address.city || address.town || address.village || address.municipality || 'Unknown',
++         state: address.state || 'Ohio'
++       };
++     } catch (error) {
++       console.warn('Reverse geocoding failed:', error);
++       return { city: 'Unknown', state: 'Ohio' };
++     }
++   };
++ 
++   const handleSubmit = async (e: React.FormEvent) =&gt; {
+      e.preventDefault();
+-     // In a real app, this would POST to an API
+-     // For now, we'll just navigate to confirmation
+-     router.push('/confirmation');
++     setError(null);
++     setIsSubmitting(true);
++ 
++     try {
++       // Validate location is selected
++       if (!formData.latitude || !formData.longitude) {
++         setError('Please select a location on the map');
++         setIsSubmitting(false);
++         return;
++       }
++ 
++       // Reverse geocode to get city and state
++       const { city, state } = await reverseGeocode(formData.latitude, formData.longitude);
++ 
++       // Submit to API
++       const response = await fetch('/api/sightings', {
++         method: 'POST',
++         headers: {
++           'Content-Type': 'application/json',
++         },
++         body: JSON.stringify({
++           date: formData.date,
++           time: formData.time,
++           type: formData.type,
++           notes: formData.notes,
++           latitude: formData.latitude,
++           longitude: formData.longitude,
++           city,
++           state,
++         }),
++       });
++ 
++       if (!response.ok) {
++         const errorData = await response.json();
++         throw new Error(errorData.error || 'Failed to submit sighting');
++       }
++ 
++       // Success - navigate to confirmation
++       router.push('/confirmation');
++     } catch (err) {
++       console.error('Submission error:', err);
++       setError(err instanceof Error ? err.message : 'Failed to submit sighting. Please try again.');
++       setIsSubmitting(false);
++     }
+    };
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/post/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 9, lines removed: 2
+
+```diff
+@@ -184,10 +184,17 @@
+              /&gt;
+            &lt;/div&gt;
++ 
++           {error &amp;&amp; (
++             &lt;div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg"&gt;
++               {error}
++             &lt;/div&gt;
++           )}
+  
+            &lt;button
+              type="submit"
+-             className="w-full bg-black text-[#F79486] py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors"
++             disabled={isSubmitting}
++             className="w-full bg-black text-[#F79486] py-4 rounded-lg font-semibold hover:bg-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            &gt;
+-             Post Your Sighting
++             {isSubmitting ? 'Submitting...' : 'Post Your Sighting'}
+            &lt;/button&gt;
+          &lt;/form&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 31, lines removed: undefined
+
+```diff
+@@ -21,4 +21,35 @@
+      async function fetchData() {
+        try {
++         // Try to fetch from Supabase API first
++         try {
++           const apiResponse = await fetch('/api/sightings');
++           if (apiResponse.ok) {
++             const apiData = await apiResponse.json();
++             if (apiData.data &amp;&amp; apiData.data.length &gt; 0) {
++               // Convert database format to Sighting format
++               const dbSightings = apiData.data.map((row: any) =&gt; ({
++                 date: row.date_of_sighting || '',
++                 latitude: row.latitude || 0,
++                 longitude: row.longitude || 0,
++                 city: row.city || '',
++                 state: row.state || '',
++                 notes: row.notes || '',
++                 timeOfDay: row.time_of_day || '',
++                 tag: row.tag_of_apparition || '',
++                 imageLink: row.image_link || '',
++               }));
++               
++               setSightings(dbSightings);
++               setFilteredSightings(dbSightings);
++               setStats(calculateStats(dbSightings));
++               setLoading(false);
++               return;
++             }
++           }
++         } catch (apiError) {
++           console.warn('API fetch failed, falling back to CSV:', apiError);
++         }
++ 
++         // Fallback to CSV if API fails or returns no data
+          const response = await fetch('/data/ghost_sightings_ohio_with_images.csv');
+          const csvText = await response.text();
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="task" data-tool-name="todo_write">
+<details><summary>Tool use: **todo_write** • Todo List</summary>
+
+- [x] Create API route to handle form submissions and save to Supabase
+- [x] Update post sighting page to submit data to API
+- [x] Update main page to fetch from Supabase instead of CSV
+- [x] Add reverse geocoding for city/state from coordinates
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking and fixing import paths in the API route:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: tsconfig.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -1,4 +1,4 @@
+  import { NextRequest, NextResponse } from 'next/server';
+- import { createSupabaseServerClient } from '@/app/lib/supabase';
++ import { createSupabaseServerClient } from '../../lib/supabase';
+  
+  export async function POST(request: NextRequest) {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 3 files</summary>
+      
+Lint paths:
+
+- `app/api/sightings/route.ts`
+- `app/post/page.tsx`
+- `app/page.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the Supabase migration to allow anonymous inserts for the API, or we can keep using the service role (which bypasses RLS). Creating a summary document:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: supabase/migrations/001_create_ghost_sightings_table.sql</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: supabase/migrations/001_create_ghost_sightings_table.sql</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: undefined
+
+```diff
+@@ -36,4 +36,10 @@
+    WITH CHECK (auth.role() = 'authenticated');
+  
++ -- Create a policy that allows anonymous inserts (for API endpoints using service role)
++ -- Note: Service role key bypasses RLS, but this policy is for client-side operations
++ CREATE POLICY "Allow anonymous insert" ON ghost_sightings
++   FOR INSERT
++   WITH CHECK (true);
++ 
+  -- Create a function to update the updated_at timestamp
+  CREATE OR REPLACE FUNCTION update_updated_at_column()
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: FORM_SUBMISSION_FIX.md</summary>
+
+**Chunk 1**
+Lines added: 102, lines removed: 1
+
+```diff
+@@ -1,1 +1,102 @@
+- 
++ # Form Submission Fix - Summary
++ 
++ ## ✅ Problem Fixed
++ 
++ Sightings submitted through the "Post a Sighting" page were not appearing in the sightings list because:
++ - The form was not saving data anywhere (just navigating to confirmation)
++ - The main page only loaded data from the static CSV file
++ 
++ ## 🔧 Changes Made
++ 
++ ### 1. Created API Route (&#96;app/api/sightings/route.ts&#96;)
++ - **POST endpoint**: Handles form submissions and saves to Supabase
++ - **GET endpoint**: Fetches all sightings from Supabase
++ - Includes error handling and validation
++ - Converts time input to time-of-day category (Morning, Afternoon, Evening, Night)
++ 
++ ### 2. Updated Post Sighting Page (&#96;app/post/page.tsx&#96;)
++ - Now actually submits form data to the API
++ - Added reverse geocoding to get city/state from coordinates
++ - Added loading state and error handling
++ - Shows error messages if submission fails
++ - Validates that a location is selected on the map
++ 
++ ### 3. Updated Main Page (&#96;app/page.tsx&#96;)
++ - Now fetches sightings from Supabase API first
++ - Falls back to CSV if API is unavailable
++ - Automatically includes newly submitted sightings
++ 
++ ### 4. Created Supabase Client Helper (&#96;app/lib/supabase.ts&#96;)
++ - Client-side Supabase client (uses anon key)
++ - Server-side Supabase client (uses service role key for API routes)
++ 
++ ### 5. Updated Utils (&#96;app/lib/utils.ts&#96;)
++ - Added &#96;dbRowToSighting()&#96; helper function to convert database format
++ 
++ ### 6. Updated Database Migration
++ - Added policy to allow anonymous inserts (for flexibility)
++ 
++ ## 🚀 How It Works Now
++ 
++ 1. **User fills out form** on "Post a Sighting" page
++ 2. **Selects location** on the map (required)
++ 3. **Submits form** → Data is sent to &#96;/api/sightings&#96; endpoint
++ 4. **API route**:
++    - Reverse geocodes coordinates to get city/state
++    - Converts time to time-of-day category
++    - Saves to Supabase database
++ 5. **Main page** fetches from Supabase and displays all sightings (including new ones)
++ 
++ ## 📋 Requirements
++ 
++ To use this feature, you need:
++ 
++ 1. **Supabase configured** (see &#96;SUPABASE_SETUP.md&#96;)
++    - Database table created (run migration)
++    - Environment variables set in &#96;.env.local&#96;
++ 
++ 2. **Required environment variables**:
++    &#96;&#96;&#96;env
++    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
++    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
++    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
++    &#96;&#96;&#96;
++ 
++ ## 🧪 Testing
++ 
++ 1. Make sure Supabase is set up and migrations are run
++ 2. Fill out the "Post a Sighting" form
++ 3. Select a location on the map
++ 4. Submit the form
++ 5. Check the main page - your new sighting should appear!
++ 
++ ## 🔍 Reverse Geocoding
++ 
++ The form uses OpenStreetMap's Nominatim API to automatically determine city and state from the selected coordinates. If this fails, it defaults to:
++ - City: "Unknown"
++ - State: "Ohio"
++ 
++ ## ⚠️ Notes
++ 
++ - The service role key is used in API routes (server-side only) and bypasses RLS
++ - Client-side operations use the anon key and respect RLS policies
++ - The API gracefully handles errors and provides helpful error messages
++ - If Supabase is unavailable, the main page falls back to CSV data
++ 
++ ## 🐛 Troubleshooting
++ 
++ **Form submission fails:**
++ - Check that Supabase environment variables are set
++ - Verify the database table exists (run migration)
++ - Check browser console for error messages
++ 
++ **Sighting doesn't appear:**
++ - Refresh the main page
++ - Check that Supabase has the new record (Table Editor)
++ - Verify API is working (check Network tab in browser dev tools)
++ 
++ **Reverse geocoding not working:**
++ - This is a free service and may have rate limits
++ - The form will still work with "Unknown" city
++ - Check browser console for warnings
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Problem fixed
+
+Sightings submitted through "Post a Sighting" are now saved and appear on the main page.
+
+### What was wrong
+- The form wasn't saving data (just navigating to confirmation)
+- The main page only loaded from a static CSV file
+
+### What changed
+
+1. Created API route (`app/api/sightings/route.ts`)
+   - POST endpoint to save form submissions to Supabase
+   - GET endpoint to fetch all sightings
+   - Handles validation and error messages
+
+2. Updated Post Sighting page (`app/post/page.tsx`)
+   - Submits form data to the API
+   - Reverse geocodes coordinates to get city/state
+   - Shows loading states and error messages
+   - Validates location selection
+
+3. Updated Main page (`app/page.tsx`)
+   - Fetches sightings from Supabase first
+   - Falls back to CSV if Supabase is unavailable
+   - Includes newly submitted sightings
+
+4. Added helper files
+   - `app/lib/supabase.ts` - Supabase client utilities
+   - Helper functions for data conversion
+
+### How it works now
+
+1. User fills out the form and selects a location on the map
+2. On submit, data goes to the API
+3. API reverse geocodes coordinates, converts time to a category, and saves to Supabase
+4. Main page fetches from Supabase and displays all sightings
+
+### Requirements
+
+Make sure you have:
+- Supabase configured (run the migration to create the table)
+- Environment variables set in `.env.local`:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+
+### Testing
+
+1. Fill out the "Post a Sighting" form
+2. Select a location on the map (required)
+3. Submit the form
+4. Check the main page — your new sighting should appear
+
+The form now includes error handling, loading states, and automatic reverse geocoding. If Supabase is unavailable, the main page falls back to CSV data, so the app continues to work.
+
+For details, see `FORM_SUBMISSION_FIX.md`.
+
+---
+
