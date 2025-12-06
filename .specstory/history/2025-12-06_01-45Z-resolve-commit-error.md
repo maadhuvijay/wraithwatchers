@@ -33,7 +33,141 @@ git config --global user.name
 
 ---
 
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: git config --global user.email</summary>
 
+```bash
+git config --global user.email
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Git user.name and user.email aren't configured. Setting them globally. Using the email from your attempt; please provide your preferred name if you want a different one.
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: git config --global user.email "maadhuvijay@gmail.com"</summary>
+
+```bash
+git config --global user.email "maadhuvijay@gmail.com"
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: git config --global user.name "Maadhuvijay"</summary>
+
+```bash
+git config --global user.name "Maadhuvijay"
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Verifying the Git configuration:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: git config --global --list | grep user</summary>
+
+```bash
+git config --global --list | grep user
+```
+
+```
+grep : The term 'grep' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At C:\Users\maadh\AppData\Local\Temp\ps-script-b8b3dfd1-d828-4d48-a83f-17d6752a4738.ps1:90 char:30
++ git config --global --list | grep user
++                              ~~~~
+    + CategoryInfo          : ObjectNotFound: (grep:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking the configuration using PowerShell:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: git config --global user.name</summary>
+
+```bash
+git config --global user.name
+```
+
+```
+maadhuvijay
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: git config --global user.email</summary>
+
+```bash
+git config --global user.email
+```
+
+```
+maadhuvijay@gmail.com
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Git configuration is set:
+
+- **user.name**: `maadhuvijay`
+- **user.email**: `maadhuvijay@gmail.com`
+
+You can commit again. The error should be resolved.
+
+If you want to change these values later, use:
+- `git config --global user.name "Your Name"`
+- `git config --global user.email "your.email@example.com"`
+
+Try your commit again.
 
 ---
 
