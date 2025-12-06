@@ -68,9 +68,22 @@ public/
 - **Leaflet.js**: Interactive maps
 - **TypeScript**: Type safety
 
+## Supabase Integration
+
+This project now includes Supabase database integration! Upload your CSV data to Supabase with these steps:
+
+1. **Quick Start**: See [QUICK_START_SUPABASE.md](./QUICK_START_SUPABASE.md) for a fast setup guide
+2. **Full Guide**: See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed instructions
+
+### Upload CSV to Supabase
+
+```bash
+npm install                    # Install dependencies (including Supabase client)
+npm run upload-csv            # Upload CSV data to Supabase
+```
+
 ## Future Enhancements
 
-- Supabase database integration
 - Real-time sighting submissions
 - Advanced filtering and search
 - User authentication
