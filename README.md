@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WraithWatchers
+
+A Next.js application for tracking and reporting ghost sightings across Ohio. Built with Next.js, React, Tailwind CSS, and Leaflet.js.
+
+## Features
+
+- **Sightings Map Page**: View ghost sightings on an interactive map with statistics
+- **Post a Sighting**: Submit new ghost sighting reports with location pinning
+- **Confirmation Page**: Thank you page after submitting a sighting
+- **Responsive Design**: Mobile-friendly interface with dark theme
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ and npm (or yarn/pnpm)
+
+### Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Run the development server:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+```
+app/
+  components/          # Reusable React components
+    Navbar.tsx        # Navigation bar with logo and links
+    Footer.tsx        # Footer component
+    StatsCards.tsx    # Statistics display cards
+    SightingsMap.tsx  # Interactive map with markers
+    SightingPopup.tsx # Popup modal for sighting details
+    SightingsTable.tsx # Data table with pagination
+    LocationMap.tsx   # Map for selecting location
+  lib/                # Utility functions
+    utils.ts          # Data parsing and statistics
+    loadSightings.ts  # CSV data loading
+  post/               # Post a sighting page
+  confirmation/       # Confirmation page
+  page.tsx           # Main sightings map page
+public/
+  data/              # CSV data file
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Visual Identity
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Primary Color**: Deep teal blue (#305669)
+- **Primary Background**: Deep midnight blue (#0A0F1C)
+- **Text**: Soft spectral white (#F4F4F4)
+- **Accent**: Warm orange rim-lighting (#FFB36A)
+- **Secondary Accent**: Cool blue (#7CA7D9)
+- **Typography**: Inter font family
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Technology Stack
 
-## Deploy on Vercel
+- **Next.js 16**: React framework
+- **React 19**: UI library
+- **Tailwind CSS 4**: Styling
+- **Leaflet.js**: Interactive maps
+- **TypeScript**: Type safety
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Future Enhancements
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Supabase database integration
+- Real-time sighting submissions
+- Advanced filtering and search
+- User authentication
+- Image upload functionality
+
+## License
+
+Private project for WraithWatchers organization.
