@@ -933,12 +933,156 @@ Reading the file content and removing any BOM character:
 ```bash
 cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $content = [System.IO.File]::ReadAllText("package.json"); if ($content.StartsWith([char]0xFEFF)) { $content = $content.Substring(1); Write-Host "Removed BOM from string" }; $utf8NoBom = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText("$PWD\package.json", $content, $utf8NoBom); Write-Host "File rewritten without BOM"
 ```
+
+```
+Removed BOM from string
+File rewritten without BOM
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: package.json</summary>
+
 </details>
 </tool-use>
 
 ---
 
 
+
+---
+
+
+The file appears corrupted. Reading it fully and fixing it:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: package.json</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The opening brace is missing. Fixing it:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: package.json</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -1,3 +1,3 @@
+- 
++ {
+    "name": "wraithwatchers",
+    "version": "0.1.0",
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -28,2 +28,3 @@
+    }
+  }
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Verifying the file is correct and has no BOM:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $bytes = [System.IO.File]::ReadAllBytes("package.json"); $firstChar = [char]$bytes[0]; Write-Host "First character: '$firstChar' (byte: $($bytes[0]))"; if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { Write-Host "ERROR: BOM still present!" } else { Write-Host "OK: No BOM, file starts correctly" }; Get-Content package.json -Raw | ConvertFrom-Json | Out-Null; if ($?) { Write-Host "JSON is valid" } else { Write-Host "JSON is invalid" }</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; $bytes = [System.IO.File]::ReadAllBytes("package.json"); $firstChar = [char]$bytes[0]; Write-Host "First character: '$firstChar' (byte: $($bytes[0]))"; if ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { Write-Host "ERROR: BOM still present!" } else { Write-Host "OK: No BOM, file starts correctly" }; Get-Content package.json -Raw | ConvertFrom-Json | Out-Null; if ($?) { Write-Host "JSON is valid" } else { Write-Host "JSON is invalid" }
+```
+
+```
+First character: '{' (byte: 123)
+OK: No BOM, file starts correctly
+JSON is valid
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The file is fixed. Clearing the build cache to ensure Next.js picks up the change:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; if (Test-Path .next) { Remove-Item -Recurse -Force .next; Write-Host "Build cache cleared" } else { Write-Host "No .next directory found" }</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers"; if (Test-Path .next) { Remove-Item -Recurse -Force .next; Write-Host "Build cache cleared" } else { Write-Host "No .next directory found" }
+```
+
+```
+Build cache cleared
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixed the `package.json` file:
+
+1. Removed the BOM (Byte Order Mark) character that was causing the JSON parsing error
+2. Restored the opening brace `{` that was accidentally removed
+3. Verified the file is valid JSON
+4. Cleared the Next.js build cache
+
+The file now:
+- Starts with `{` (no BOM)
+- Is valid JSON
+- Should parse correctly by Next.js/Turbopack
+
+Try building again; the error should be resolved. The BOM character (`﻿`) at the start of the file was causing the parser to fail, and it's now removed.
 
 ---
 

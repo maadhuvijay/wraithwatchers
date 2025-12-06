@@ -112,7 +112,7 @@ export default function Home() {
       <main className="flex-1 p-4 md:p-8 max-w-7xl mr-auto w-full">
         <div className="flex flex-col gap-2 mb-6">
           <h1 className="text-3xl font-bold text-[#F79486]">Buckeye Sighting Stats</h1>
-          <p className="text-lg text-white">Track paranormal activity across Ohio near WraithWatchers</p>
+          <p className="text-lg text-white">Track paranormal activity across Ohio</p>
         </div>
         <StatsCards stats={stats} />
         
