@@ -84,7 +84,10 @@ export default function PostSighting() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to submit sighting: ${response.statusText}`);
+        const errorMessage = errorData.details 
+          ? `${errorData.error || 'Error'}: ${errorData.details}`
+          : errorData.error || `Failed to submit sighting: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       // Success - navigate to confirmation page

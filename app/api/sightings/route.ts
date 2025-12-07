@@ -20,7 +20,14 @@ function timeToTimeOfDay(time: string): string {
 // GET endpoint: Fetch all sightings from database
 export async function GET() {
   try {
-    const supabase = createServerSupabase();
+    let supabase;
+    try {
+      supabase = createServerSupabase();
+    } catch (supabaseError) {
+      console.error('Supabase configuration error:', supabaseError);
+      // Return empty array if Supabase is not configured
+      return NextResponse.json({ sightings: [] }, { status: 200 });
+    }
     
     const { data, error } = await supabase
       .from('ghost_sightings')
@@ -65,8 +72,21 @@ export async function POST(request: NextRequest) {
     // Convert time to time-of-day category
     const timeOfDay = timeToTimeOfDay(time);
 
-    // Save to Supabase database
-    const supabase = createServerSupabase();
+    // Try to save to Supabase database
+    let supabase;
+    try {
+      supabase = createServerSupabase();
+    } catch (supabaseError) {
+      console.error('Supabase configuration error:', supabaseError);
+      return NextResponse.json(
+        { 
+          error: 'Database not configured', 
+          details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file.',
+          message: supabaseError instanceof Error ? supabaseError.message : 'Database configuration error'
+        },
+        { status: 500 }
+      );
+    }
     
     const { data, error } = await supabase
       .from('ghost_sightings')

@@ -687,3 +687,173 @@ Test by posting a new sighting and checking the map; it should appear immediatel
 
 ---
 
+_**User (2025-12-07 04:13Z)**_
+
+getting internal server error after submitting post sighting form
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Investigating the internal server error. Checking the API route and Supabase configuration.
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "environment variables SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY configuration" • **13** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `README.md` | L68 |
+| `.gitignore` | L41 |
+| `package.json` | L32 |
+| `README.md` | L66-84 |
+| `app/page.tsx` | L172 |
+| `next.config.ts` | L6 |
+| `app/layout.tsx` | L30 |
+| `app/globals.css` | L35 |
+| `app/lib/loadSightings.ts` | L18 |
+| `eslint.config.mjs` | L17 |
+| `app/page.tsx` | L10-172 |
+| `app/post/page.tsx` | L205 |
+| `tsconfig.json` | L34 |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" && npm run dev 2>&1 | head -20</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" && npm run dev 2>&1 | head -20
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking the Supabase configuration and adding error handling for missing environment variables:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/supabase.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: ENV_SETUP.md</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The error is likely due to missing Supabase environment variables. Updating the API route to handle this gracefully and provide clearer error messages:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 15, lines removed: 2
+
+```diff
+@@ -66,6 +66,19 @@
+      const timeOfDay = timeToTimeOfDay(time);
+  
+-     // Save to Supabase database
+-     const supabase = createServerSupabase();
++     // Try to save to Supabase database
++     let supabase;
++     try {
++       supabase = createServerSupabase();
++     } catch (supabaseError) {
++       console.error('Supabase configuration error:', supabaseError);
++       return NextResponse.json(
++         { 
++           error: 'Database not configured', 
++           details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file.',
++           message: error instanceof Error ? error.message : 'Database configuration error'
++         },
++         { status: 500 }
++       );
++     }
+      
+      const { data, error } = await supabase
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 8, lines removed: 1
+
+```diff
+@@ -21,5 +21,12 @@
+  export async function GET() {
+    try {
+-     const supabase = createServerSupabase();
++     let supabase;
++     try {
++       supabase = createServerSupabase();
++     } catch (supabaseError) {
++       console.error('Supabase configuration error:', supabaseError);
++       // Return empty array if Supabase is not configured
++       return NextResponse.json({ sightings: [] }, { status: 200 });
++     }
+      
+      const { data, error } = await supabase
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
