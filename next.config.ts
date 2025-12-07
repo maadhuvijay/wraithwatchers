@@ -5,10 +5,11 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   // Ensure proper source map handling
   webpack: (config, { dev, isServer }) => {
-    // Use proper source map generation in development
+    // Use more reliable source map generation in development
     if (dev) {
-      config.devtool = 'eval-source-map';
-    } else if (!isServer) {
+      // Use 'cheap-module-source-map' for better compatibility
+      config.devtool = 'cheap-module-source-map';
+    } else {
       // Disable source maps in production builds
       config.devtool = false;
     }
