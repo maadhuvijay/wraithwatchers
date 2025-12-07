@@ -110,15 +110,39 @@ async function uploadToSupabase() {
   // Check for service role key with multiple possible variable names
   const supabaseServiceRoleKeyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || 
                                       process.env.SUPABASE_SERVICE_KEY ||
-                                      process.env.SUPABASE_KEY;
+                                      process.env.SUPABASE_KEY ||
+                                      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
+                                      process.env.SUPABASE_SERVICE_ROLE ||
+                                      process.env.SERVICE_ROLE_KEY;
+  
+  // Fallback to anon key if service role key not available (may not work with RLS)
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+                  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+  
+  const keyToUse = supabaseServiceRoleKeyToUse || anonKey;
+  const usingServiceRole = !!supabaseServiceRoleKeyToUse;
 
   // Debug: Show what environment variables are available
   console.log('Environment variables found:');
   console.log('  NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Found' : '✗ Missing');
   console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRoleKeyToUse ? '✓ Found' : '✗ Missing');
+  if (!supabaseServiceRoleKeyToUse && anonKey) {
+    console.log('  Using anon key as fallback (may fail if RLS is enabled)');
+  }
+  
+  // Show all Supabase-related env vars for debugging
+  const allSupabaseVars = Object.keys(process.env)
+    .filter(k => k.includes('SUPABASE'))
+    .reduce((acc, key) => {
+      const value = process.env[key];
+      acc[key] = value ? `${value.substring(0, 20)}...` : 'undefined';
+      return acc;
+    }, {} as Record<string, string>);
+  console.log('\nAll Supabase environment variables:');
+  console.log(JSON.stringify(allSupabaseVars, null, 2));
   console.log('');
 
-  if (!supabaseUrl || !supabaseServiceRoleKeyToUse) {
+  if (!supabaseUrl || !keyToUse) {
     const supabaseVars = Object.keys(process.env).filter(k => k.includes('SUPABASE'));
     console.error('Available Supabase env vars:', supabaseVars);
     console.error('');
@@ -129,12 +153,18 @@ async function uploadToSupabase() {
     console.error('  4. Add it to your .env.local file as:');
     console.error('     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here');
     throw new Error(
-      'Missing SUPABASE_SERVICE_ROLE_KEY. Please add it to your .env.local file.'
+      'Missing Supabase credentials. Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file.'
     );
   }
+  
+  if (!usingServiceRole) {
+    console.warn('⚠ WARNING: Using anon key instead of service role key.');
+    console.warn('  This may fail if Row Level Security (RLS) is enabled on your table.');
+    console.warn('  For bulk uploads, the service role key is recommended.\n');
+  }
 
-  // Create Supabase client with service role key (bypasses RLS)
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKeyToUse, {
+  // Create Supabase client (service role key bypasses RLS, anon key respects RLS)
+  const supabase = createClient(supabaseUrl, keyToUse, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

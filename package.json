@@ -10,7 +10,8 @@
     "upload-data": "tsx scripts/upload-to-supabase.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.86.2",
+    "csv-parse": "^6.1.0",
     "next": "16.0.7",
     "papaparse": "^5.4.1",
     "react": "19.2.1",
@@ -28,5 +29,19 @@
     "tailwindcss": "^4",
     "tsx": "^4.7.1",
     "typescript": "^5"
-  }
+  },
+  "description": "A Next.js application for tracking and reporting ghost sightings across Ohio. Built with Next.js, React, Tailwind CSS, and Leaflet.js.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maadhuvijay/wraithwatchers.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/maadhuvijay/wraithwatchers/issues"
+  },
+  "homepage": "https://github.com/maadhuvijay/wraithwatchers#readme"
 }

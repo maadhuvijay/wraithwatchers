@@ -1454,3 +1454,753 @@ The script will upload all rows from your CSV file to the Supabase database.
 
 ---
 
+_**User (2025-12-07 04:13Z)**_
+
+The supabase table editor is still empty
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Running the upload script to populate the database:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.3] injecting env (2) from public\.env.local -- tip: ⚙️  suppress all logs with { quiet: true }
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+
+Available Supabase env vars: [
+  'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY',
+  'NEXT_PUBLIC_SUPABASE_URL'
+]
+
+To get your Service Role Key:
+  1. Go to your Supabase project dashboard
+  2. Navigate to Settings &gt; API
+  3. Copy the "service_role" key (NOT the anon key)
+  4. Add it to your .env.local file as:
+     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+
+Fatal error: Error: Missing SUPABASE_SERVICE_ROLE_KEY. Please add it to your .env.local file.
+    at uploadToSupabase (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:131:11)
+    at Papa (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:190:1)
+    at Object.&lt;anonymous&gt; (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:198:4)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object.transformer (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:336:3)
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The script still needs the `SUPABASE_SERVICE_ROLE_KEY` in your `.env.local`. Checking if we can use the anon key as a temporary workaround, though the service role key is recommended for bulk uploads:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: scripts/upload-to-supabase.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the script to try the anon key as a fallback, though the service role key is recommended:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 12, lines removed: 2
+
+```diff
+@@ -112,12 +112,22 @@
+                                        process.env.SUPABASE_SERVICE_KEY ||
+                                        process.env.SUPABASE_KEY;
+- 
++   
++   // Fallback to anon key if service role key not available (may not work with RLS)
++   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
++                   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
++   
++   const keyToUse = supabaseServiceRoleKeyToUse || anonKey;
++   const usingServiceRole = !!supabaseServiceRoleKeyToUse;
++ 
+    // Debug: Show what environment variables are available
+    console.log('Environment variables found:');
+    console.log('  NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Found' : '✗ Missing');
+    console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRoleKeyToUse ? '✓ Found' : '✗ Missing');
++   if (!supabaseServiceRoleKeyToUse &amp;&amp; anonKey) {
++     console.log('  Using anon key as fallback (may fail if RLS is enabled)');
++   }
+    console.log('');
+  
+-   if (!supabaseUrl || !supabaseServiceRoleKeyToUse) {
++   if (!supabaseUrl || !keyToUse) {
+      const supabaseVars = Object.keys(process.env).filter(k =&gt; k.includes('SUPABASE'));
+      console.error('Available Supabase env vars:', supabaseVars);
+```
+
+**Chunk 2**
+Lines added: 7, lines removed: 1
+
+```diff
+@@ -130,7 +140,13 @@
+      console.error('     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here');
+      throw new Error(
+-       'Missing SUPABASE_SERVICE_ROLE_KEY. Please add it to your .env.local file.'
++       'Missing Supabase credentials. Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file.'
+      );
+    }
++   
++   if (!usingServiceRole) {
++     console.warn('⚠ WARNING: Using anon key instead of service role key.');
++     console.warn('  This may fail if Row Level Security (RLS) is enabled on your table.');
++     console.warn('  For bulk uploads, the service role key is recommended.\n');
++   }
+  
+    // Create Supabase client with service role key (bypasses RLS)
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: 2
+
+```diff
+@@ -150,6 +150,6 @@
+    }
+  
+-   // Create Supabase client with service role key (bypasses RLS)
+-   const supabase = createClient(supabaseUrl, supabaseServiceRoleKeyToUse, {
++   // Create Supabase client (service role key bypasses RLS, anon key respects RLS)
++   const supabase = createClient(supabaseUrl, keyToUse, {
+      auth: {
+        autoRefreshToken: false,
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Rerunning the upload script with the anon key fallback:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (2) from public\.env.local -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+Reading CSV from: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\public\data\ghost_sightings_ohio_with_images.csv
+Parsed 1272 rows from CSV
+Uploading batch 1/2 (1000 rows)...
+⚠ WARNING: Using anon key instead of service role key.
+  This may fail if Row Level Security (RLS) is enabled on your table.
+  For bulk uploads, the service role key is recommended.
+
+Uploading batch 2/2 (272 rows)...
+Error uploading batch 1: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "ghost_sightings"'
+}
+
+=== Upload Summary ===
+Total rows parsed: 1272
+Successfully uploaded: 0
+Errors: 1272
+
+⚠ Some rows failed to upload. Please check the errors above.
+
+Done!
+Error uploading batch 2: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "ghost_sightings"'
+}
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+RLS is enabled on the table, which blocks inserts with the anon key. Two options:
+
+- Option 1 (recommended): Add the service role key to bypass RLS for bulk uploads.
+  1. Go to your Supabase dashboard → Settings → API
+  2. Copy the service_role key (not the anon key)
+  3. Add it to your `.env.local` file in the `public` folder:
+     ```
+     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+     ```
+  4. Run the upload script again
+
+- Option 2: Temporarily disable RLS (for testing only).
+  In the Supabase SQL Editor, run:
+  ```sql
+  ALTER TABLE public.ghost_sightings DISABLE ROW LEVEL SECURITY;
+  ```
+  Then run the upload script. Re-enable RLS after:
+  ```sql
+  ALTER TABLE public.ghost_sightings ENABLE ROW LEVEL SECURITY;
+  ```
+
+Creating a SQL script to temporarily disable RLS so we can upload the data:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: scripts/disable-rls-temporarily.sql</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: 1
+
+```diff
+@@ -1,1 +1,7 @@
+- 
++ -- Temporarily disable RLS to allow bulk data upload
++ -- Run this in Supabase SQL Editor before uploading data
++ ALTER TABLE public.ghost_sightings DISABLE ROW LEVEL SECURITY;
++ 
++ -- After uploading, re-enable RLS with:
++ -- ALTER TABLE public.ghost_sightings ENABLE ROW LEVEL SECURITY;
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: scripts/enable-rls.sql</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -1,1 +1,3 @@
+- 
++ -- Re-enable RLS after data upload is complete
++ ALTER TABLE public.ghost_sightings ENABLE ROW LEVEL SECURITY;
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Choose one:
+
+**Quick fix (disable RLS temporarily):**
+1. Open the Supabase SQL Editor
+2. Run this SQL:
+   ```sql
+   ALTER TABLE public.ghost_sightings DISABLE ROW LEVEL SECURITY;
+   ```
+3. Run the upload script: `npm run upload-data`
+4. Re-enable RLS after upload:
+   ```sql
+   ALTER TABLE public.ghost_sightings ENABLE ROW LEVEL SECURITY;
+   ```
+
+**Better solution (use service role key):**
+1. Get your service role key from Supabase Dashboard → Settings → API
+2. Add `SUPABASE_SERVICE_ROLE_KEY=your_key` to your `.env.local` file
+3. Run `npm run upload-data`
+
+The service role key bypasses RLS, so it’s better for bulk uploads. After adding it, the script should upload all 1,272 rows successfully.
+
+Which option do you want to use?
+
+---
+
+_**User (2025-12-07 04:13Z)**_
+
+The supabase table editor is still empty. I have updated the env.local file. Please try again
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Running the upload script again to populate the database:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (2) from public\.env.local -- tip: 👥 sync secrets across teammates &amp; machines: https://dotenvx.com/ops
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+Reading CSV from: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\public\data\ghost_sightings_ohio_with_images.csv
+Parsed 1272 rows from CSV
+Uploading batch 1/2 (1000 rows)...
+⚠ WARNING: Using anon key instead of service role key.
+  This may fail if Row Level Security (RLS) is enabled on your table.
+  For bulk uploads, the service role key is recommended.
+
+Uploading batch 2/2 (272 rows)...
+Error uploading batch 1: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "ghost_sightings"'
+}
+
+=== Upload Summary ===
+Total rows parsed: 1272
+Successfully uploaded: 0
+Errors: 1272
+
+⚠ Some rows failed to upload. Please check the errors above.
+
+Done!
+Error uploading batch 2: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "ghost_sightings"'
+}
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The script still isn't finding `SUPABASE_SERVICE_ROLE_KEY`. Checking which environment variables are loaded and updating the script to show more details:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 11, lines removed: undefined
+
+```diff
+@@ -127,4 +127,15 @@
+      console.log('  Using anon key as fallback (may fail if RLS is enabled)');
+    }
++   
++   // Show all Supabase-related env vars for debugging
++   const allSupabaseVars = Object.keys(process.env)
++     .filter(k =&gt; k.includes('SUPABASE'))
++     .reduce((acc, key) =&gt; {
++       const value = process.env[key];
++       acc[key] = value ? &#96;${value.substring(0, 20)}...&#96; : 'undefined';
++       return acc;
++     }, {} as Record&lt;string, string&gt;);
++   console.log('\nAll Supabase environment variables:');
++   console.log(JSON.stringify(allSupabaseVars, null, 2));
+    console.log('');
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Rerunning the script to see which environment variables are loaded:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (2) from public\.env.local -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+All Supabase environment variables:
+{
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY": "sb_publishable_SSE31...",
+  "NEXT_PUBLIC_SUPABASE_URL": "https://nbddjuiqxrxg..."
+}
+
+Reading CSV from: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\public\data\ghost_sightings_ohio_with_images.csv
+Parsed 1272 rows from CSV
+Uploading batch 1/2 (1000 rows)...
+⚠ WARNING: Using anon key instead of service role key.
+  This may fail if Row Level Security (RLS) is enabled on your table.
+  For bulk uploads, the service role key is recommended.
+
+Uploading batch 2/2 (272 rows)...
+Error uploading batch 1: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "ghost_sightings"'
+}
+
+=== Upload Summary ===
+Total rows parsed: 1272
+Successfully uploaded: 0
+Errors: 1272
+
+⚠ Some rows failed to upload. Please check the errors above.
+
+Done!
+Error uploading batch 2: {
+  code: '42501',
+  details: null,
+  hint: null,
+  message: 'new row violates row-level security policy for table "ghost_sightings"'
+}
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The script isn't finding `SUPABASE_SERVICE_ROLE_KEY` in your `.env.local`. Checking for alternative variable names and updating the script to handle common variations:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -111,5 +111,8 @@
+    const supabaseServiceRoleKeyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                                        process.env.SUPABASE_SERVICE_KEY ||
+-                                       process.env.SUPABASE_KEY;
++                                       process.env.SUPABASE_KEY ||
++                                       process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
++                                       process.env.SUPABASE_SERVICE_ROLE ||
++                                       process.env.SERVICE_ROLE_KEY;
+    
+    // Fallback to anon key if service role key not available (may not work with RLS)
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+The script still isn't finding the service role key. Since RLS is blocking the upload, here are two options:
+
+**Option 1: Verify the .env.local variable name**
+
+In your `.env.local` file (in the `public` folder), make sure you have exactly:
+```
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+```
+
+Important:
+- No quotes around the value (unless the key itself contains spaces)
+- No spaces around the `=`
+- The variable name must be exactly `SUPABASE_SERVICE_ROLE_KEY`
+
+**Option 2: Temporarily disable RLS (quickest)**
+
+1. Go to your Supabase Dashboard
+2. Open the SQL Editor
+3. Run this command:
+   ```sql
+   ALTER TABLE public.ghost_sightings DISABLE ROW LEVEL SECURITY;
+   ```
+4. Then run the upload script again: `npm run upload-data`
+5. After the upload completes, re-enable RLS:
+   ```sql
+   ALTER TABLE public.ghost_sightings ENABLE ROW LEVEL SECURITY;
+   ```
+
+Creating a script that can disable RLS if you have the service role key. For now, disabling RLS in the Supabase dashboard is the fastest way to upload the data.
+
+Should I help you disable RLS, or do you want to double-check the `.env.local` file format first?
+
+---
+
+_**User (2025-12-07 04:13Z)**_
+
+npm init -y
+
+npm install @supabase/supabase-js csv-parse
+
+
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Running the commands to initialize npm and install the dependencies:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm init -y</summary>
+
+```bash
+npm init -y
+```
+
+```
+Wrote to C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\package.json:
+
+{
+  "name": "wraithwatchers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "upload-data": "tsx scripts/upload-to-supabase.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "next": "16.0.7",
+    "papaparse": "^5.4.1",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.7",
+    "tailwindcss": "^4",
+    "tsx": "^4.7.1",
+    "typescript": "^5"
+  },
+  "description": "A Next.js application for tracking and reporting ghost sightings across Ohio. Built with Next.js, React, Tailwind CSS, and Leaflet.js.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maadhuvijay/wraithwatchers.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/maadhuvijay/wraithwatchers/issues"
+  },
+  "homepage": "https://github.com/maadhuvijay/wraithwatchers#readme"
+}
+
+
+
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm install @supabase/supabase-js csv-parse</summary>
+
+```bash
+npm install @supabase/supabase-js csv-parse
+```
+
+```
+
+added 1 package, and audited 375 packages in 1s
+
+142 packages are looking for funding
+  run &#96;npm fund&#96; for details
+
+found 0 vulnerabilities
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Installed `csv-parse`. `@supabase/supabase-js` was already installed.
+
+You can use `csv-parse` instead of `papaparse` for CSV parsing. Should I:
+1. Create a new upload script using `csv-parse`?
+2. Update the existing script to use `csv-parse`?
+3. Do something else?
+
+The current script uses `papaparse`, which should work. The main issue is the missing `SUPABASE_SERVICE_ROLE_KEY` or RLS blocking the upload.
+
+---
+
