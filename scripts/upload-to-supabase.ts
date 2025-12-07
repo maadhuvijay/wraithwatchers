@@ -6,12 +6,18 @@ import Papa from 'papaparse';
 // Load environment variables from .env.local
 import * as dotenv from 'dotenv';
 
-// Try to load .env.local from the project root
-const envPath = path.join(process.cwd(), '.env.local');
-const envLoaded = dotenv.config({ path: envPath });
+// Try to load .env.local from multiple possible locations
+const rootEnvPath = path.join(process.cwd(), '.env.local');
+const publicEnvPath = path.join(process.cwd(), 'public', '.env.local');
+
+let envLoaded = dotenv.config({ path: rootEnvPath });
+if (envLoaded.error) {
+  // Try public folder as fallback
+  envLoaded = dotenv.config({ path: publicEnvPath });
+}
 
 if (envLoaded.error && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  console.warn(`Warning: Could not load .env.local from ${envPath}`);
+  console.warn(`Warning: Could not load .env.local from ${rootEnvPath} or ${publicEnvPath}`);
   console.warn('Make sure .env.local exists in the project root with:');
   console.warn('  NEXT_PUBLIC_SUPABASE_URL=your_supabase_url');
   console.warn('  SUPABASE_SERVICE_ROLE_KEY=your_service_role_key\n');
@@ -100,18 +106,35 @@ function parseCSVData(csvPath: string): DatabaseRow[] {
 async function uploadToSupabase() {
   // Get Supabase credentials from environment
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  // Check for service role key with multiple possible variable names
+  const supabaseServiceRoleKeyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                                      process.env.SUPABASE_SERVICE_KEY ||
+                                      process.env.SUPABASE_KEY;
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  // Debug: Show what environment variables are available
+  console.log('Environment variables found:');
+  console.log('  NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Found' : '✗ Missing');
+  console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceRoleKeyToUse ? '✓ Found' : '✗ Missing');
+  console.log('');
+
+  if (!supabaseUrl || !supabaseServiceRoleKeyToUse) {
+    const supabaseVars = Object.keys(process.env).filter(k => k.includes('SUPABASE'));
+    console.error('Available Supabase env vars:', supabaseVars);
+    console.error('');
+    console.error('To get your Service Role Key:');
+    console.error('  1. Go to your Supabase project dashboard');
+    console.error('  2. Navigate to Settings > API');
+    console.error('  3. Copy the "service_role" key (NOT the anon key)');
+    console.error('  4. Add it to your .env.local file as:');
+    console.error('     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here');
     throw new Error(
-      'Missing Supabase environment variables. Please ensure .env.local contains:\n' +
-      '  NEXT_PUBLIC_SUPABASE_URL=your_url\n' +
-      '  SUPABASE_SERVICE_ROLE_KEY=your_service_role_key'
+      'Missing SUPABASE_SERVICE_ROLE_KEY. Please add it to your .env.local file.'
     );
   }
 
   // Create Supabase client with service role key (bypasses RLS)
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKeyToUse, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
