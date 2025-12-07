@@ -1,0 +1,176 @@
+import { createClient } from '@supabase/supabase-js';
+import * as fs from 'fs';
+import * as path from 'path';
+import Papa from 'papaparse';
+
+// Load environment variables from .env.local
+import * as dotenv from 'dotenv';
+
+// Try to load .env.local from the project root
+const envPath = path.join(process.cwd(), '.env.local');
+const envLoaded = dotenv.config({ path: envPath });
+
+if (envLoaded.error && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  console.warn(`Warning: Could not load .env.local from ${envPath}`);
+  console.warn('Make sure .env.local exists in the project root with:');
+  console.warn('  NEXT_PUBLIC_SUPABASE_URL=your_supabase_url');
+  console.warn('  SUPABASE_SERVICE_ROLE_KEY=your_service_role_key\n');
+}
+
+interface CSVRow {
+  'Date of Sighting': string;
+  'Latitude of Sighting': string;
+  'Longitude of Sighting': string;
+  'Nearest Approximate City': string;
+  'US State': string;
+  'Notes about the sighting': string;
+  'Time of Day': string;
+  'Tag of Apparition': string;
+  'Image Link': string;
+}
+
+interface DatabaseRow {
+  sighting_date: string; // ISO date string
+  latitude: number;
+  longitude: number;
+  nearest_city: string | null;
+  us_state: string | null;
+  notes: string | null;
+  time_of_day: string | null;
+  tag_of_apparition: string | null;
+  image_link: string | null;
+}
+
+// Convert MM/DD/YYYY to YYYY-MM-DD
+function convertDate(dateStr: string): string | null {
+  if (!dateStr || dateStr.trim() === '') return null;
+  
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return null;
+  
+  const month = parts[0].padStart(2, '0');
+  const day = parts[1].padStart(2, '0');
+  const year = parts[2];
+  
+  return `${year}-${month}-${day}`;
+}
+
+// Parse CSV and convert to database format
+function parseCSVData(csvPath: string): DatabaseRow[] {
+  const csvContent = fs.readFileSync(csvPath, 'utf-8');
+  
+  const parsed = Papa.parse<CSVRow>(csvContent, {
+    header: true,
+    skipEmptyLines: true,
+  });
+
+  const rows: DatabaseRow[] = [];
+
+  for (const row of parsed.data) {
+    const date = convertDate(row['Date of Sighting']);
+    if (!date) {
+      console.warn(`Skipping row with invalid date: ${row['Date of Sighting']}`);
+      continue;
+    }
+
+    const latitude = parseFloat(row['Latitude of Sighting']);
+    const longitude = parseFloat(row['Longitude of Sighting']);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      console.warn(`Skipping row with invalid coordinates: ${row['Latitude of Sighting']}, ${row['Longitude of Sighting']}`);
+      continue;
+    }
+
+    rows.push({
+      sighting_date: date,
+      latitude,
+      longitude,
+      nearest_city: row['Nearest Approximate City']?.trim() || null,
+      us_state: row['US State']?.trim() || null,
+      notes: row['Notes about the sighting']?.trim() || null,
+      time_of_day: row['Time of Day']?.trim() || null,
+      tag_of_apparition: row['Tag of Apparition']?.trim() || null,
+      image_link: row['Image Link']?.trim() || null,
+    });
+  }
+
+  return rows;
+}
+
+async function uploadToSupabase() {
+  // Get Supabase credentials from environment
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error(
+      'Missing Supabase environment variables. Please ensure .env.local contains:\n' +
+      '  NEXT_PUBLIC_SUPABASE_URL=your_url\n' +
+      '  SUPABASE_SERVICE_ROLE_KEY=your_service_role_key'
+    );
+  }
+
+  // Create Supabase client with service role key (bypasses RLS)
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  // Read and parse CSV
+  const csvPath = path.join(process.cwd(), 'public', 'data', 'ghost_sightings_ohio_with_images.csv');
+  console.log(`Reading CSV from: ${csvPath}`);
+  
+  const rows = parseCSVData(csvPath);
+  console.log(`Parsed ${rows.length} rows from CSV`);
+
+  // Upload in batches of 1000 (Supabase has limits)
+  const batchSize = 1000;
+  let uploaded = 0;
+  let errors = 0;
+
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const batchNum = Math.floor(i / batchSize) + 1;
+    const totalBatches = Math.ceil(rows.length / batchSize);
+
+    console.log(`Uploading batch ${batchNum}/${totalBatches} (${batch.length} rows)...`);
+
+    const { data, error } = await supabase
+      .from('ghost_sightings')
+      .insert(batch)
+      .select();
+
+    if (error) {
+      console.error(`Error uploading batch ${batchNum}:`, error);
+      errors += batch.length;
+    } else {
+      uploaded += batch.length;
+      console.log(`✓ Successfully uploaded batch ${batchNum} (${batch.length} rows)`);
+    }
+  }
+
+  console.log('\n=== Upload Summary ===');
+  console.log(`Total rows parsed: ${rows.length}`);
+  console.log(`Successfully uploaded: ${uploaded}`);
+  console.log(`Errors: ${errors}`);
+
+  if (errors === 0) {
+    console.log('\n✓ All data uploaded successfully!');
+  } else {
+    console.log(`\n⚠ Some rows failed to upload. Please check the errors above.`);
+  }
+}
+
+// Run the upload
+uploadToSupabase()
+  .then(() => {
+    console.log('\nDone!');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('\nFatal error:', error);
+    process.exit(1);
+  });
+

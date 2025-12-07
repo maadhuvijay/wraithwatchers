@@ -19,3 +19,4 @@ export async function loadSightings(): Promise<Sighting[]> {
 }
 
 
+
