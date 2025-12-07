@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // Turbopack configuration
+  turbopack: {
+    // Set the root directory to fix lockfile warning
+    // This ensures Next.js uses the correct workspace root
+    root: process.cwd(),
+  },
 };
 
 export default nextConfig;
