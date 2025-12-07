@@ -857,3 +857,156 @@ Lines added: 8, lines removed: 1
 
 ---
 
+
+Fixing the error variable reference:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixing the error variable reference:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -83,5 +83,5 @@
+            error: 'Database not configured', 
+            details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file.',
+-           message: error instanceof Error ? error.message : 'Database configuration error'
++           message: supabaseError instanceof Error ? supabaseError.message : 'Database configuration error'
+          },
+          { status: 500 }
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/api/sightings/route.ts`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking how the post page handles errors to ensure users see clear messages:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/post/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Improving error handling in the post page to show more detailed error messages:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/post/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -85,5 +85,8 @@
+        if (!response.ok) {
+          const errorData = await response.json().catch(() =&gt; ({}));
+-         throw new Error(errorData.error || &#96;Failed to submit sighting: ${response.statusText}&#96;);
++         const errorMessage = errorData.details 
++           ? &#96;${errorData.error || 'Error'}: ${errorData.details}&#96;
++           : errorData.error || &#96;Failed to submit sighting: ${response.statusText}&#96;;
++         throw new Error(errorMessage);
+        }
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Changes Made
+
+1. **Better error handling in API route**: Catches Supabase configuration errors and returns clear messages instead of crashing.
+2. **Improved error display**: The post page now shows detailed error messages, including configuration issues.
+
+## Most Likely Cause
+
+The internal server error is likely due to missing Supabase environment variables. The API route now returns a clear error message instead of crashing.
+
+## To Fix This
+
+1. Create a `.env.local` file in the project root (if it doesn't exist).
+2. Add your Supabase credentials:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+   ```
+3. Restart your development server after adding the environment variables.
+
+You can find these values in your Supabase project:
+- Go to [app.supabase.com](https://app.supabase.com)
+- Select your project
+- Go to **Settings** → **API**
+- Copy the Project URL and keys
+
+After adding the environment variables and restarting the server, try submitting a sighting again. If the error persists, check the browser console and server logs for the specific error message, which should now be more descriptive.
+
+---
+
