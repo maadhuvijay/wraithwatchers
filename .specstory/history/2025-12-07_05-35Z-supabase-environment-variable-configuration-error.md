@@ -166,3 +166,271 @@ Directory: **c:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers** (1 file)
 
 ---
 
+
+The error occurs because `createServerSupabase()` can't find the environment variables. Since you updated the keys, the dev server likely needs a restart to load them. Checking environment variable names and suggesting a restart:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/supabase.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "Where are environment variable names documented or used for Supabase configuration?" • **13** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `.gitignore` | L41 |
+| `README.md` | L68 |
+| `README.md` | L66-84 |
+| `package.json` | L32 |
+| `next.config.ts` | L6 |
+| `eslint.config.mjs` | L17 |
+| `app/layout.tsx` | L30 |
+| `tsconfig.json` | L34 |
+| `app/post/page.tsx` | L208 |
+| `.cursorindexingignore` | L3 |
+| `app/globals.css` | L35 |
+| `app/page.tsx` | L172 |
+| `app/lib/loadSightings.ts` | L18 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The error is thrown when the Supabase environment variables aren't loaded. After updating `.env.local`, restart the Next.js dev server to load them.
+
+Checking for any Supabase setup documentation to verify the required variable names:
+
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "*SUPABASE*.md" • **2** results in **1** directory</summary>
+
+Directory: **c:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers** (2 files)
+
+| File |
+|------|
+| `SUPABASE_SETUP.md` |
+| `QUICK_START_SUPABASE.md` |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="list_dir">
+<details>
+            <summary>Tool use: **list_dir** • Listed directory undefined • **0** results</summary>
+        
+No results found
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Reviewing the setup docs for environment variable requirements. The dev server needs a restart to load new environment variables. Verifying the setup:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: QUICK_START_SUPABASE.md</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: ENV_SETUP.md</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Confirming the required environment variables:
+1. `NEXT_PUBLIC_SUPABASE_URL`
+2. `SUPABASE_SERVICE_ROLE_KEY`
+
+Next.js only loads environment variables at startup, so if you updated `.env.local` while the server was running, restart the dev server to load them.
+
+Improving error handling to provide clearer feedback and verify the configuration:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Improving the error message to include a reminder to restart the dev server. Adding a note about that:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -82,5 +82,5 @@
+          { 
+            error: 'Database not configured', 
+-           details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file.',
++           details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file. If you just updated them, make sure to restart your development server (stop and run &#96;npm run dev&#96; again).',
+            message: supabaseError instanceof Error ? supabaseError.message : 'Database configuration error'
+          },
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Improving error messages in the Supabase configuration to indicate which variables are missing:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/supabase.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Making the error messages more specific about which variables are missing:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/lib/supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -19,5 +19,8 @@
+  
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+-     throw new Error('Missing Supabase environment variables');
++     const missing = [];
++     if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
++     if (!supabaseServiceRoleKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
++     throw new Error(&#96;Missing Supabase environment variables: ${missing.join(', ')}. Please configure these in your .env.local file and restart your development server.&#96;);
+    }
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 2 files</summary>
+      
+Lint paths:
+
+- `app/lib/supabase.ts`
+- `app/api/sightings/route.ts`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Fix: Restart your development server
+
+Next.js only loads environment variables when the server starts. If you updated `.env.local` while the server was running, restart it to load the new values.
+
+**Steps to fix:**
+
+1. Stop the current dev server (press `Ctrl+C` in the terminal where it's running)
+2. Restart it:
+   ```bash
+   npm run dev
+   ```
+
+The improved error messages now indicate which variables are missing and remind you to restart.
+
+**Verify your `.env.local` file has these exact variable names:**
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+```
+
+**Important notes:**
+- No quotes around the values
+- No spaces around the `=` sign
+- File must be named `.env.local` (not `.env` or anything else)
+- Must be in the project root directory (same folder as `package.json`)
+
+After restarting, try submitting a post sighting again. The error should be resolved.
+
+---
+
