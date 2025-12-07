@@ -103,21 +103,36 @@ function parseCSVData(csvPath: string): DatabaseRow[] {
   return rows;
 }
 
+// Helper to clean env var values (remove quotes and trim)
+function cleanEnvVar(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  // Remove surrounding quotes (single or double) and trim whitespace
+  let cleaned = value.trim();
+  // Remove quotes from start and end only
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
+      (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned.trim();
+}
+
 async function uploadToSupabase() {
-  // Get Supabase credentials from environment
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Get Supabase credentials from environment and clean them
+  const supabaseUrlRaw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = cleanEnvVar(supabaseUrlRaw);
   
   // Check for service role key with multiple possible variable names
-  const supabaseServiceRoleKeyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || 
-                                      process.env.SUPABASE_SERVICE_KEY ||
-                                      process.env.SUPABASE_KEY ||
-                                      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
-                                      process.env.SUPABASE_SERVICE_ROLE ||
-                                      process.env.SERVICE_ROLE_KEY;
+  const supabaseServiceRoleKeyToUse = cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE_KEY) || 
+                                      cleanEnvVar(process.env.SUPABASE_SERVICE_KEY) ||
+                                      cleanEnvVar(process.env.SUPABASE_KEY) ||
+                                      cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) ||
+                                      cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE) ||
+                                      cleanEnvVar(process.env.SERVICE_ROLE_KEY);
   
   // Fallback to anon key if service role key not available (may not work with RLS)
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-                  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+  const anonKey = cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
+                  cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ||
+                  cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY);
   
   const keyToUse = supabaseServiceRoleKeyToUse || anonKey;
   const usingServiceRole = !!supabaseServiceRoleKeyToUse;
@@ -132,17 +147,45 @@ async function uploadToSupabase() {
   
   // Show all Supabase-related env vars for debugging
   const allSupabaseVars = Object.keys(process.env)
-    .filter(k => k.includes('SUPABASE'))
+    .filter(k => k.includes('SUPABASE') || k.includes('SERVICE'))
     .reduce((acc, key) => {
       const value = process.env[key];
-      acc[key] = value ? `${value.substring(0, 20)}...` : 'undefined';
+      acc[key] = value ? (value.length > 30 ? `${value.substring(0, 30)}...` : value) : 'undefined';
       return acc;
     }, {} as Record<string, string>);
-  console.log('\nAll Supabase environment variables:');
-  console.log(JSON.stringify(allSupabaseVars, null, 2));
+  console.log('\nAll Supabase-related environment variables found:');
+  Object.keys(allSupabaseVars).forEach(key => {
+    console.log(`  ${key}: ${allSupabaseVars[key]}`);
+  });
   console.log('');
 
-  if (!supabaseUrl || !keyToUse) {
+  // Validate and fix URL format
+  let finalSupabaseUrl = supabaseUrl;
+  if (supabaseUrl) {
+    // Remove any trailing slashes
+    finalSupabaseUrl = supabaseUrl.replace(/\/+$/, '');
+    
+    // Debug: Show URL info (first 60 chars for debugging)
+    console.log('URL Debug Info:');
+    console.log('  Raw URL (first 60 chars):', supabaseUrlRaw?.substring(0, 60) || 'undefined');
+    console.log('  Cleaned URL (first 60 chars):', finalSupabaseUrl?.substring(0, 60) || 'undefined');
+    
+    // If URL doesn't start with http:// or https://, try to add https://
+    if (!finalSupabaseUrl.startsWith('http://') && !finalSupabaseUrl.startsWith('https://')) {
+      console.warn('  URL does not start with http:// or https://, attempting to add https://...');
+      finalSupabaseUrl = `https://${finalSupabaseUrl}`;
+      console.log('  Fixed URL (first 60 chars):', finalSupabaseUrl?.substring(0, 60));
+    }
+    
+    // Final validation
+    if (!finalSupabaseUrl.startsWith('http://') && !finalSupabaseUrl.startsWith('https://')) {
+      console.error('Invalid Supabase URL format. URL must start with http:// or https://');
+      throw new Error('Invalid Supabase URL format');
+    }
+    console.log('');
+  }
+
+  if (!finalSupabaseUrl || !keyToUse) {
     const supabaseVars = Object.keys(process.env).filter(k => k.includes('SUPABASE'));
     console.error('Available Supabase env vars:', supabaseVars);
     console.error('');
@@ -152,6 +195,8 @@ async function uploadToSupabase() {
     console.error('  3. Copy the "service_role" key (NOT the anon key)');
     console.error('  4. Add it to your .env.local file as:');
     console.error('     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here');
+    console.error('');
+    console.error('Note: Make sure there are NO quotes around the values in .env.local');
     throw new Error(
       'Missing Supabase credentials. Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file.'
     );
@@ -164,7 +209,7 @@ async function uploadToSupabase() {
   }
 
   // Create Supabase client (service role key bypasses RLS, anon key respects RLS)
-  const supabase = createClient(supabaseUrl, keyToUse, {
+  const supabase = createClient(finalSupabaseUrl, keyToUse, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

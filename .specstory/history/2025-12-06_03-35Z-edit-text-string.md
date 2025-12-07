@@ -2204,3 +2204,842 @@ The current script uses `papaparse`, which should work. The main issue is the mi
 
 ---
 
+_**User (2025-12-07 04:13Z)**_
+
+updated the .env.local file with all keys. please try again
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Running the upload script again:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🛠️  run anywhere with &#96;dotenvx run -- yourcommand&#96;
+[dotenv@17.2.3] injecting env (3) from public\.env.local -- tip: ⚙️  override existing env vars with { override: true }
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+All Supabase environment variables:
+{
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY": "********************...",
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "********************...",
+  "NEXT_PUBLIC_SUPABASE_URL": "********************..."
+}
+
+⚠ WARNING: Using anon key instead of service role key.
+  This may fail if Row Level Security (RLS) is enabled on your table.
+  For bulk uploads, the service role key is recommended.
+
+
+Fatal error: Error: Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.
+    at validateSupabaseUrl (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\@supabase\supabase-js\src\lib\helpers.ts:90:11)
+    at new SupabaseClient (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\@supabase\supabase-js\src\SupabaseClient.ts:117:40)
+    at createClient (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\@supabase\supabase-js\src\index.ts:54:10)
+    at uploadToSupabase (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:167:20)
+    at Papa (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:220:1)
+    at Object.&lt;anonymous&gt; (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:228:4)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object.transformer (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Two issues:
+1. `SUPABASE_SERVICE_ROLE_KEY` still isn't being found.
+2. The Supabase URL appears invalid (possibly quoted or malformed).
+
+Updating the script to handle quoted values and add better debugging:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: scripts/upload-to-supabase.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the script to clean quoted values and improve error handling:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 18, lines removed: 10
+
+```diff
+@@ -103,20 +103,28 @@
+    return rows;
+  }
++ 
++ // Helper to clean env var values (remove quotes and trim)
++ function cleanEnvVar(value: string | undefined): string | undefined {
++   if (!value) return undefined;
++   return value.trim().replace(/^["']|["']$/g, '');
++ }
+  
+  async function uploadToSupabase() {
+-   // Get Supabase credentials from environment
+-   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
++   // Get Supabase credentials from environment and clean them
++   const supabaseUrlRaw = process.env.NEXT_PUBLIC_SUPABASE_URL;
++   const supabaseUrl = cleanEnvVar(supabaseUrlRaw);
+    
+    // Check for service role key with multiple possible variable names
+-   const supabaseServiceRoleKeyToUse = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+-                                       process.env.SUPABASE_SERVICE_KEY ||
+-                                       process.env.SUPABASE_KEY ||
+-                                       process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
+-                                       process.env.SUPABASE_SERVICE_ROLE ||
+-                                       process.env.SERVICE_ROLE_KEY;
++   const supabaseServiceRoleKeyToUse = cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE_KEY) || 
++                                       cleanEnvVar(process.env.SUPABASE_SERVICE_KEY) ||
++                                       cleanEnvVar(process.env.SUPABASE_KEY) ||
++                                       cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) ||
++                                       cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE) ||
++                                       cleanEnvVar(process.env.SERVICE_ROLE_KEY);
+    
+    // Fallback to anon key if service role key not available (may not work with RLS)
+-   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+-                   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
++   const anonKey = cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
++                   cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ||
++                   cleanEnvVar(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY);
+    
+    const keyToUse = supabaseServiceRoleKeyToUse || anonKey;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 7, lines removed: undefined
+
+```diff
+@@ -150,4 +150,11 @@
+    console.log(JSON.stringify(allSupabaseVars, null, 2));
+    console.log('');
++ 
++   // Validate URL format
++   if (supabaseUrl &amp;&amp; !supabaseUrl.startsWith('http://') &amp;&amp; !supabaseUrl.startsWith('https://')) {
++     console.error('Invalid Supabase URL format. URL must start with http:// or https://');
++     console.error('Current URL value:', supabaseUrlRaw);
++     throw new Error('Invalid Supabase URL format');
++   }
+  
+    if (!supabaseUrl || !keyToUse) {
+```
+
+**Chunk 2**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -161,4 +168,6 @@
+      console.error('  4. Add it to your .env.local file as:');
+      console.error('     SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here');
++     console.error('');
++     console.error('Note: Make sure there are NO quotes around the values in .env.local');
+      throw new Error(
+        'Missing Supabase credentials. Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file.'
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the debug output to show all environment variable names:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: 4
+
+```diff
+@@ -141,12 +141,14 @@
+    // Show all Supabase-related env vars for debugging
+    const allSupabaseVars = Object.keys(process.env)
+-     .filter(k =&gt; k.includes('SUPABASE'))
++     .filter(k =&gt; k.includes('SUPABASE') || k.includes('SERVICE'))
+      .reduce((acc, key) =&gt; {
+        const value = process.env[key];
+-       acc[key] = value ? &#96;${value.substring(0, 20)}...&#96; : 'undefined';
++       acc[key] = value ? (value.length &gt; 30 ? &#96;${value.substring(0, 30)}...&#96; : value) : 'undefined';
+        return acc;
+      }, {} as Record&lt;string, string&gt;);
+-   console.log('\nAll Supabase environment variables:');
+-   console.log(JSON.stringify(allSupabaseVars, null, 2));
++   console.log('\nAll Supabase-related environment variables found:');
++   Object.keys(allSupabaseVars).forEach(key =&gt; {
++     console.log(&#96;  ${key}: ${allSupabaseVars[key]}&#96;);
++   });
+    console.log('');
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Rerunning the upload script with the improved parsing:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 👥 sync secrets across teammates &amp; machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (3) from public\.env.local -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+All Supabase-related environment variables found:
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: *****************************
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ******************************...
+  NEXT_PUBLIC_SUPABASE_URL: ************************
+
+Invalid Supabase URL format. URL must start with http:// or https://
+Current URL value: ************************
+
+Fatal error: Error: Invalid Supabase URL format
+    at uploadToSupabase (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:159:11)
+    at Papa (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:239:1)
+    at Object.&lt;anonymous&gt; (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\scripts\upload-to-supabase.ts:247:4)
+    at Module._compile (node:internal/modules/cjs/loader:1761:14)
+    at Object.transformer (C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1481:32)
+    at Module._load (node:internal/modules/cjs/loader:1300:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:336:3)
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The URL appears invalid. Updating the script to show more details and handle the URL better:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 19, lines removed: 5
+
+```diff
+@@ -153,9 +153,23 @@
+    console.log('');
+  
+-   // Validate URL format
+-   if (supabaseUrl &amp;&amp; !supabaseUrl.startsWith('http://') &amp;&amp; !supabaseUrl.startsWith('https://')) {
+-     console.error('Invalid Supabase URL format. URL must start with http:// or https://');
+-     console.error('Current URL value:', supabaseUrlRaw);
+-     throw new Error('Invalid Supabase URL format');
++   // Validate and fix URL format
++   let finalSupabaseUrl = supabaseUrl;
++   if (supabaseUrl) {
++     // Remove any trailing slashes
++     finalSupabaseUrl = supabaseUrl.replace(/\/+$/, '');
++     
++     // If URL doesn't start with http:// or https://, try to add https://
++     if (!finalSupabaseUrl.startsWith('http://') &amp;&amp; !finalSupabaseUrl.startsWith('https://')) {
++       console.warn('URL does not start with http:// or https://, attempting to fix...');
++       finalSupabaseUrl = &#96;https://${finalSupabaseUrl}&#96;;
++     }
++     
++     // Final validation
++     if (!finalSupabaseUrl.startsWith('http://') &amp;&amp; !finalSupabaseUrl.startsWith('https://')) {
++       console.error('Invalid Supabase URL format. URL must start with http:// or https://');
++       console.error('Raw URL value (first 50 chars):', supabaseUrlRaw?.substring(0, 50));
++       console.error('Cleaned URL value (first 50 chars):', supabaseUrl?.substring(0, 50));
++       throw new Error('Invalid Supabase URL format');
++     }
+    }
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -198,5 +198,5 @@
+  
+    // Create Supabase client (service role key bypasses RLS, anon key respects RLS)
+-   const supabase = createClient(supabaseUrl, keyToUse, {
++   const supabase = createClient(finalSupabaseUrl, keyToUse, {
+      auth: {
+        autoRefreshToken: false,
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -174,5 +174,5 @@
+    }
+  
+-   if (!supabaseUrl || !keyToUse) {
++   if (!finalSupabaseUrl || !keyToUse) {
+      const supabaseVars = Object.keys(process.env).filter(k =&gt; k.includes('SUPABASE'));
+      console.error('Available Supabase env vars:', supabaseVars);
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Rerunning the script:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🛠️  run anywhere with &#96;dotenvx run -- yourcommand&#96;
+[dotenv@17.2.3] injecting env (3) from public\.env.local -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+All Supabase-related environment variables found:
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: *****************************
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ******************************...
+  NEXT_PUBLIC_SUPABASE_URL: ************************
+
+Reading CSV from: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\public\data\ghost_sightings_ohio_with_images.csv
+URL does not start with http:// or https://, attempting to fix...
+⚠ WARNING: Using anon key instead of service role key.
+  This may fail if Row Level Security (RLS) is enabled on your table.
+  For bulk uploads, the service role key is recommended.
+
+Parsed 1272 rows from CSV
+Uploading batch 1/2 (1000 rows)...
+Uploading batch 2/2 (272 rows)...
+
+=== Upload Summary ===
+Total rows parsed: 1272
+Successfully uploaded: 0
+Errors: 1272
+
+⚠ Some rows failed to upload. Please check the errors above.
+
+Done!
+Error uploading batch 1: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND ************************ (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND ************************\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+Error uploading batch 2: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND ************************ (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND ************************\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The URL still isn't parsing correctly. Improving the cleaning function and adding better debugging:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 8, lines removed: 1
+
+```diff
+@@ -107,5 +107,12 @@
+  function cleanEnvVar(value: string | undefined): string | undefined {
+    if (!value) return undefined;
+-   return value.trim().replace(/^["']|["']$/g, '');
++   // Remove surrounding quotes (single or double) and trim whitespace
++   let cleaned = value.trim();
++   // Remove quotes from start and end only
++   if ((cleaned.startsWith('"') &amp;&amp; cleaned.endsWith('"')) || 
++       (cleaned.startsWith("'") &amp;&amp; cleaned.endsWith("'"))) {
++     cleaned = cleaned.slice(1, -1);
++   }
++   return cleaned.trim();
+  }
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: scripts/upload-to-supabase.ts</summary>
+
+**Chunk 1**
+Lines added: 8, lines removed: 3
+
+```diff
+@@ -165,18 +165,23 @@
+      // Remove any trailing slashes
+      finalSupabaseUrl = supabaseUrl.replace(/\/+$/, '');
++     
++     // Debug: Show URL info (first 60 chars for debugging)
++     console.log('URL Debug Info:');
++     console.log('  Raw URL (first 60 chars):', supabaseUrlRaw?.substring(0, 60) || 'undefined');
++     console.log('  Cleaned URL (first 60 chars):', finalSupabaseUrl?.substring(0, 60) || 'undefined');
+      
+      // If URL doesn't start with http:// or https://, try to add https://
+      if (!finalSupabaseUrl.startsWith('http://') &amp;&amp; !finalSupabaseUrl.startsWith('https://')) {
+-       console.warn('URL does not start with http:// or https://, attempting to fix...');
++       console.warn('  URL does not start with http:// or https://, attempting to add https://...');
+        finalSupabaseUrl = &#96;https://${finalSupabaseUrl}&#96;;
++       console.log('  Fixed URL (first 60 chars):', finalSupabaseUrl?.substring(0, 60));
+      }
+      
+      // Final validation
+      if (!finalSupabaseUrl.startsWith('http://') &amp;&amp; !finalSupabaseUrl.startsWith('https://')) {
+        console.error('Invalid Supabase URL format. URL must start with http:// or https://');
+-       console.error('Raw URL value (first 50 chars):', supabaseUrlRaw?.substring(0, 50));
+-       console.error('Cleaned URL value (first 50 chars):', supabaseUrl?.substring(0, 50));
+        throw new Error('Invalid Supabase URL format');
+      }
++     console.log('');
+    }
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Rerunning the script to see the actual URL value:
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npm run upload-data</summary>
+
+```bash
+npm run upload-data
+```
+
+```
+
+&gt; wraithwatchers@0.1.0 upload-data
+&gt; tsx scripts/upload-to-supabase.ts
+
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: 🛠️  run anywhere with &#96;dotenvx run -- yourcommand&#96;
+[dotenv@17.2.3] injecting env (3) from public\.env.local -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+Environment variables found:
+  NEXT_PUBLIC_SUPABASE_URL: ✓ Found
+  SUPABASE_SERVICE_ROLE_KEY: ✗ Missing
+  Using anon key as fallback (may fail if RLS is enabled)
+
+All Supabase-related environment variables found:
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: *****************************
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ******************************...
+  NEXT_PUBLIC_SUPABASE_URL: ************************
+
+URL Debug Info:
+  Raw URL (first 60 chars): ************************
+  Cleaned URL (first 60 chars): ************************
+  Fixed URL (first 60 chars): https://************************
+
+Reading CSV from: C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers\public\data\ghost_sightings_ohio_with_images.csv
+Parsed 1272 rows from CSV
+Uploading batch 1/2 (1000 rows)...
+Uploading batch 2/2 (272 rows)...
+
+=== Upload Summary ===
+Total rows parsed: 1272
+Successfully uploaded: 0
+Errors: 1272
+
+⚠ Some rows failed to upload. Please check the errors above.
+
+Done!
+  URL does not start with http:// or https://, attempting to add https://...
+⚠ WARNING: Using anon key instead of service role key.
+  This may fail if Row Level Security (RLS) is enabled on your table.
+  For bulk uploads, the service role key is recommended.
+
+Error uploading batch 1: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND ************************ (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND ************************\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+Error uploading batch 2: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND ************************ (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND ************************\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The URL is still failing, and `SUPABASE_SERVICE_ROLE_KEY` isn't found. Creating a debug script to list all environment variables:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **write** • Edit file: scripts/debug-env.ts</summary>
+
+**Chunk 1**
+Lines added: 66, lines removed: 1
+
+```diff
+@@ -1,1 +1,66 @@
+- 
++ import * as dotenv from 'dotenv';
++ import * as path from 'path';
++ 
++ // Load environment variables from multiple locations
++ const rootEnvPath = path.join(process.cwd(), '.env.local');
++ const publicEnvPath = path.join(process.cwd(), 'public', '.env.local');
++ 
++ let envLoaded = dotenv.config({ path: rootEnvPath });
++ if (envLoaded.error) {
++   envLoaded = dotenv.config({ path: publicEnvPath });
++ }
++ 
++ console.log('=== Environment Variables Debug ===\n');
++ 
++ // Show all environment variables that contain SUPABASE, SERVICE, or ROLE
++ const relevantVars = Object.keys(process.env)
++   .filter(k =&gt; 
++     k.toUpperCase().includes('SUPABASE') || 
++     k.toUpperCase().includes('SERVICE') || 
++     k.toUpperCase().includes('ROLE')
++   )
++   .sort();
++ 
++ console.log('Relevant environment variables found:');
++ relevantVars.forEach(key =&gt; {
++   const value = process.env[key];
++   if (value) {
++     // Show first 50 chars and last 10 chars for keys, full for short values
++     const displayValue = value.length &gt; 60 
++       ? &#96;${value.substring(0, 50)}...${value.substring(value.length - 10)}&#96;
++       : value;
++     console.log(&#96;  ${key} = ${displayValue}&#96;);
++   } else {
++     console.log(&#96;  ${key} = (undefined)&#96;);
++   }
++ });
++ 
++ console.log('\n=== Checking for Service Role Key ===');
++ const possibleKeys = [
++   'SUPABASE_SERVICE_ROLE_KEY',
++   'SUPABASE_SERVICE_KEY',
++   'SUPABASE_KEY',
++   'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY',
++   'SUPABASE_SERVICE_ROLE',
++   'SERVICE_ROLE_KEY',
++   'SERVICE_ROLE',
++ ];
++ 
++ possibleKeys.forEach(key =&gt; {
++   const value = process.env[key];
++   console.log(&#96;  ${key}: ${value ? '✓ FOUND' : '✗ NOT FOUND'}&#96;);
++ });
++ 
++ console.log('\n=== URL Check ===');
++ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
++ if (url) {
++   console.log('  NEXT_PUBLIC_SUPABASE_URL found');
++   console.log('  Length:', url.length);
++   console.log('  Starts with http://:', url.startsWith('http://'));
++   console.log('  Starts with https://:', url.startsWith('https://'));
++   console.log('  First 30 chars:', url.substring(0, 30));
++   console.log('  Last 20 chars:', url.substring(Math.max(0, url.length - 20)));
++ } else {
++   console.log('  NEXT_PUBLIC_SUPABASE_URL: NOT FOUND');
++ }
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: tsx scripts/debug-env.ts</summary>
+
+```bash
+tsx scripts/debug-env.ts
+```
+
+```
+tsx : The term 'tsx' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the 
+spelling of the name, or if a path was included, verify that the path is correct and try again.
+At C:\Users\maadh\AppData\Local\Temp\ps-script-964481f7-d126-4856-a79e-beca3eea4903.ps1:76 char:1
++ tsx scripts/debug-env.ts
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (tsx:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+ 
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: npx tsx scripts/debug-env.ts</summary>
+
+```bash
+npx tsx scripts/debug-env.ts
+```
+
+```
+[dotenv@17.2.3] injecting env (0) from .env.local -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (3) from public\.env.local -- tip: ⚙️  override existing env vars with { override: true }
+=== Environment Variables Debug ===
+
+Relevant environment variables found:
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = *****************************
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = ************************************
+  NEXT_PUBLIC_SUPABASE_URL = ************************
+
+=== Checking for Service Role Key ===
+  SUPABASE_SERVICE_ROLE_KEY: ✗ NOT FOUND
+  SUPABASE_SERVICE_KEY: ✗ NOT FOUND
+  SUPABASE_KEY: ✗ NOT FOUND
+  NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: ✗ NOT FOUND
+  SUPABASE_SERVICE_ROLE: ✗ NOT FOUND
+  SERVICE_ROLE_KEY: ✗ NOT FOUND
+  SERVICE_ROLE: ✗ NOT FOUND
+
+=== URL Check ===
+  NEXT_PUBLIC_SUPABASE_URL found
+  Length: 24
+  Starts with http://: false
+  Starts with https://: false
+  First 30 chars: ************************
+  Last 20 chars: ********************
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The debug script shows two issues:
+
+1. `SUPABASE_SERVICE_ROLE_KEY` is missing — it's not in your environment variables.
+2. The URL is only 24 characters and doesn't start with `http://` or `https://`. A Supabase URL should look like `https://xxxxx.supabase.co` (longer than 24 characters).
+
+**To fix this, your `.env.local` file in the `public` folder should have:**
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+```
+
+**Important notes:**
+- The URL must be the full Supabase URL starting with `https://`
+- The `SUPABASE_SERVICE_ROLE_KEY` is different from the anon key — get it from Supabase Dashboard → Settings → API → "service_role" key
+- No quotes around the values in `.env.local`
+- No spaces around the `=` sign
+
+After updating `.env.local` with the correct values, run the upload script again. The service role key is required to bypass RLS for bulk uploads.
+
+Should I help you verify the format once you've updated it?
+
+---
+
