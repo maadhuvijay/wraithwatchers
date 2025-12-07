@@ -20,14 +20,41 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch('/data/ghost_sightings_ohio_with_images.csv');
-        const csvText = await response.text();
+        // First, try to fetch from API (Supabase database)
+        const apiResponse = await fetch('/api/sightings');
+        
+        if (apiResponse.ok) {
+          const apiData = await apiResponse.json();
+          if (apiData.sightings && apiData.sightings.length > 0) {
+            setSightings(apiData.sightings);
+            setFilteredSightings(apiData.sightings);
+            setStats(calculateStats(apiData.sightings));
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Fallback to CSV if API fails or returns no data
+        console.warn('API fetch failed or returned no data, falling back to CSV');
+        const csvResponse = await fetch('/data/ghost_sightings_ohio_with_images.csv');
+        const csvText = await csvResponse.text();
         const parsed = parseCSV(csvText);
         setSightings(parsed);
         setFilteredSightings(parsed);
         setStats(calculateStats(parsed));
       } catch (error) {
         console.error('Error loading data:', error);
+        // Try CSV as last resort
+        try {
+          const csvResponse = await fetch('/data/ghost_sightings_ohio_with_images.csv');
+          const csvText = await csvResponse.text();
+          const parsed = parseCSV(csvText);
+          setSightings(parsed);
+          setFilteredSightings(parsed);
+          setStats(calculateStats(parsed));
+        } catch (csvError) {
+          console.error('Error loading CSV fallback:', csvError);
+        }
       } finally {
         setLoading(false);
       }
