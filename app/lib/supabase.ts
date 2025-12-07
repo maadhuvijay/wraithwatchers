@@ -18,7 +18,10 @@ export function createServerSupabase() {
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error('Missing Supabase environment variables');
+    const missing = [];
+    if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!supabaseServiceRoleKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error(`Missing Supabase environment variables: ${missing.join(', ')}. Please configure these in your .env.local file and restart your development server.`);
   }
 
   return createClient(supabaseUrl, supabaseServiceRoleKey, {

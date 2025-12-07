@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Database not configured', 
-          details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file.',
+          details: 'Supabase environment variables are missing. Please configure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env.local file. If you just updated them, make sure to restart your development server (stop and run `npm run dev` again).',
           message: supabaseError instanceof Error ? supabaseError.message : 'Database configuration error'
         },
         { status: 500 }
