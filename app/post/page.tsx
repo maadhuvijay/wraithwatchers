@@ -110,8 +110,7 @@ export default function PostSighting() {
         backgroundImage: 'url(/ghost3.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundBlendMode: 'overlay'
+        backgroundRepeat: 'no-repeat'
       }}
     >
       <Navbar activePage="post" />

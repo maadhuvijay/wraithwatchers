@@ -114,8 +114,7 @@ export default function Home() {
           backgroundImage: 'url(/ghost3.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundBlendMode: 'overlay'
+          backgroundRepeat: 'no-repeat'
         }}
       >
         <p>Loading sightings...</p>
@@ -130,8 +129,7 @@ export default function Home() {
         backgroundImage: 'url(/ghost3.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundBlendMode: 'overlay'
+        backgroundRepeat: 'no-repeat'
       }}
     >
       <Navbar activePage="sightings" />
