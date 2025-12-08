@@ -22,44 +22,58 @@ export default function Home() {
   // Preload background image and wait for it to fully load before rendering content
   useEffect(() => {
     const img = new Image();
+    let loadTimeout: NodeJS.Timeout;
+    let maxWaitTimeout: NodeJS.Timeout;
+    
+    const showContent = () => {
+      // Wait 1 second after image loads before showing content
+      loadTimeout = setTimeout(() => {
+        setReady(true);
+      }, 1000);
+    };
     
     const handleLoad = () => {
+      console.log('Background image loaded successfully');
       setBackgroundLoaded(true);
-      // Small delay to ensure image is fully rendered
-      setTimeout(() => {
-        setReady(true);
-      }, 50);
+      showContent();
     };
     
     img.onload = handleLoad;
-    img.onerror = () => {
-      // Even if image fails, allow page to render
-      console.warn('Background image failed to load');
+    img.onerror = (error) => {
+      // Even if image fails, allow page to render after delay
+      console.error('Background image failed to load:', error);
+      console.error('Attempted to load from:', img.src);
       setBackgroundLoaded(true);
-      setReady(true);
+      showContent();
     };
     
     // Set src after handlers are attached
-    img.src = '/ghost3.png';
+    const imagePath = '/ghost3.png';
+    console.log('Preloading background image from:', imagePath);
+    img.src = imagePath;
+    
+    // Always set backgroundLoaded to true immediately so background is visible
+    // The Image preload is just to ensure it's in cache
+    setBackgroundLoaded(true);
+    
+    // Fallback: show content after 2 seconds max even if image doesn't load
+    maxWaitTimeout = setTimeout(() => {
+      console.log('Background image loading timeout, showing content anyway');
+      showContent();
+    }, 2000);
     
     // If image is already cached, it might not trigger onload
     // Check multiple conditions to catch cached images
-    if (img.complete) {
-      if (img.naturalHeight !== 0) {
-        handleLoad();
-      } else {
-        // Image might be loading, wait a bit
-        setTimeout(() => {
-          if (img.complete && img.naturalHeight !== 0) {
-            handleLoad();
-          } else {
-            // Fallback: allow rendering anyway
-            setBackgroundLoaded(true);
-            setReady(true);
-          }
-        }, 100);
-      }
+    if (img.complete && img.naturalHeight !== 0) {
+      console.log('Background image already cached');
+      clearTimeout(maxWaitTimeout);
+      handleLoad();
     }
+    
+    return () => {
+      if (loadTimeout) clearTimeout(loadTimeout);
+      if (maxWaitTimeout) clearTimeout(maxWaitTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -155,18 +169,16 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#5D5D5D] text-black flex flex-col relative">
-      {/* Fixed background layer that doesn't shift */}
-      <div
-        className="fixed inset-0 -z-10"
-        style={{
-          backgroundImage: 'url(/ghost3.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundColor: '#5D5D5D'
-        }}
-      />
+    <div 
+      className="min-h-screen bg-[#5D5D5D] text-black flex flex-col relative"
+      style={{
+        backgroundImage: 'url(/ghost3.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {/* Content layer */}
       <div className="relative z-0 flex flex-col min-h-screen">
         {!ready || loading ? (
