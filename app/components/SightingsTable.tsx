@@ -97,3 +97,4 @@ export default function SightingsTable({ sightings }: SightingsTableProps) {
 
 
 
+

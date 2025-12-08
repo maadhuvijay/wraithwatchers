@@ -106,22 +106,6 @@ export default function Home() {
     return sightings;
   }
 
-  if (loading) {
-    return (
-      <div 
-        className="min-h-screen bg-[#5D5D5D] text-black flex items-center justify-center"
-        style={{
-          backgroundImage: 'url(/ghost3.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <p>Loading sightings...</p>
-      </div>
-    );
-  }
-
   return (
     <div 
       className="min-h-screen bg-[#5D5D5D] text-black flex flex-col"
@@ -132,40 +116,48 @@ export default function Home() {
         backgroundRepeat: 'no-repeat'
       }}
     >
-      <Navbar activePage="sightings" />
-      
-      <main className="flex-1 p-4 md:p-8 max-w-7xl mr-auto w-full">
-        <div className="flex flex-col gap-2 mb-6">
-          <h1 className="text-3xl font-bold text-[#F79486]">Buckeye Sighting Stats</h1>
-          <p className="text-lg text-white">Track paranormal activity across Ohio</p>
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p>Loading sightings...</p>
         </div>
-        <StatsCards stats={stats} />
-        
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-4 text-[#F79486]">Sightings Map</h2>
-          <SightingsMap
-            sightings={filteredSightings}
-            selectedSighting={selectedSighting}
-            onMarkerClick={setSelectedSighting}
-          />
-        </div>
+      ) : (
+        <>
+          <Navbar activePage="sightings" />
+          
+          <main className="flex-1 p-4 md:p-8 max-w-7xl mr-auto w-full">
+            <div className="flex flex-col gap-2 mb-6">
+              <h1 className="text-3xl font-bold text-[#F79486]">Buckeye Sighting Stats</h1>
+              <p className="text-lg text-white">Track paranormal activity across Ohio</p>
+            </div>
+            <StatsCards stats={stats} />
+            
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-4 text-[#F79486]">Sightings Map</h2>
+              <SightingsMap
+                sightings={filteredSightings}
+                selectedSighting={selectedSighting}
+                onMarkerClick={setSelectedSighting}
+              />
+            </div>
 
-        <FilterControlPanel 
-          sightings={sightings}
-          onFilterChange={setFilteredSightings}
-        />
+            <FilterControlPanel 
+              sightings={sightings}
+              onFilterChange={setFilteredSightings}
+            />
 
-        <SightingsTable sightings={filteredSightings} />
-      </main>
+            <SightingsTable sightings={filteredSightings} />
+          </main>
 
-      {selectedSighting && (
-        <SightingPopup
-          sighting={selectedSighting}
-          onClose={() => setSelectedSighting(null)}
-        />
+          {selectedSighting && (
+            <SightingPopup
+              sighting={selectedSighting}
+              onClose={() => setSelectedSighting(null)}
+            />
+          )}
+
+          <Footer />
+        </>
       )}
-
-      <Footer />
     </div>
   );
 }
