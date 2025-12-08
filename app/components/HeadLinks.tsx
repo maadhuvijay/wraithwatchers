@@ -4,6 +4,17 @@ import { useEffect } from 'react';
 
 export default function HeadLinks() {
   useEffect(() => {
+    // Preload background image to prevent visual shifts
+    const preloadLink = document.createElement('link');
+    preloadLink.rel = 'preload';
+    preloadLink.href = '/ghost3.png';
+    preloadLink.as = 'image';
+    
+    // Check if already added
+    if (!document.querySelector(`link[href="/ghost3.png"]`)) {
+      document.head.appendChild(preloadLink);
+    }
+
     // Load Leaflet CSS from CDN as fallback
     // This ensures the app works even if npm packages aren't installed yet
     const link = document.createElement('link');

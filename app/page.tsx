@@ -16,8 +16,56 @@ export default function Home() {
   const [stats, setStats] = useState({ averagePerWeek: 0, peakTime: 'N/A', topCity: 'N/A' });
   const [selectedSighting, setSelectedSighting] = useState<Sighting | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backgroundLoaded, setBackgroundLoaded] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  // Preload background image and wait for it to fully load before rendering content
+  useEffect(() => {
+    const img = new Image();
+    
+    const handleLoad = () => {
+      setBackgroundLoaded(true);
+      // Small delay to ensure image is fully rendered
+      setTimeout(() => {
+        setReady(true);
+      }, 50);
+    };
+    
+    img.onload = handleLoad;
+    img.onerror = () => {
+      // Even if image fails, allow page to render
+      console.warn('Background image failed to load');
+      setBackgroundLoaded(true);
+      setReady(true);
+    };
+    
+    // Set src after handlers are attached
+    img.src = '/ghost3.png';
+    
+    // If image is already cached, it might not trigger onload
+    // Check multiple conditions to catch cached images
+    if (img.complete) {
+      if (img.naturalHeight !== 0) {
+        handleLoad();
+      } else {
+        // Image might be loading, wait a bit
+        setTimeout(() => {
+          if (img.complete && img.naturalHeight !== 0) {
+            handleLoad();
+          } else {
+            // Fallback: allow rendering anyway
+            setBackgroundLoaded(true);
+            setReady(true);
+          }
+        }, 100);
+      }
+    }
+  }, []);
 
   useEffect(() => {
+    // Only start fetching data after background is ready
+    if (!ready) return;
+    
     async function fetchData() {
       try {
         // First, try to fetch from API (Supabase database)
@@ -60,7 +108,7 @@ export default function Home() {
       }
     }
     fetchData();
-  }, []);
+  }, [ready]);
 
   // Simple CSV parser
   function parseCSV(csvText: string): Sighting[] {
@@ -107,20 +155,25 @@ export default function Home() {
   }
 
   return (
-    <div 
-      className="min-h-screen bg-[#5D5D5D] text-black flex flex-col"
-      style={{
-        backgroundImage: 'url(/ghost3.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <p>Loading sightings...</p>
-        </div>
-      ) : (
+    <div className="min-h-screen bg-[#5D5D5D] text-black flex flex-col relative">
+      {/* Fixed background layer that doesn't shift */}
+      <div
+        className="fixed inset-0 -z-10"
+        style={{
+          backgroundImage: 'url(/ghost3.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: '#5D5D5D'
+        }}
+      />
+      {/* Content layer */}
+      <div className="relative z-0 flex flex-col min-h-screen">
+        {!ready || loading ? (
+          <div className="flex-1 flex items-center justify-center min-h-screen">
+            <p>Loading sightings...</p>
+          </div>
+        ) : (
         <>
           <Navbar activePage="sightings" />
           
@@ -157,7 +210,8 @@ export default function Home() {
 
           <Footer />
         </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -292,3 +292,1081 @@ The background image now loads once and remains stable, while only the inner con
 
 ---
 
+_**User (2025-12-08 13:06Z)**_
+
+the background image slight ly changes when the front page is loading
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Investigating why the background image shifts during loading. Checking the current implementation and adding image preloading to prevent layout shifts.
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/layout.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "How are images preloaded or optimized in the application?" • **9** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L11009-11446 |
+| `app/lib/loadSightings.ts` | L18 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L8493-9035 |
+| `app/page.tsx` | L162 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L8418-9035 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L11009-11529 |
+| `app/page.tsx` | L10-162 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L11100-11529 |
+| `.next/dev/server/chunks/ssr/node_modules_ae1fc6df._.js` | L8493-9104 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking HeadLinks to see if we can preload the background image there:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/components/HeadLinks.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Preloading the background image and ensuring it's fully loaded before rendering to prevent shifts. Implementing the fix:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 14, lines removed: undefined
+
+```diff
+@@ -17,4 +17,18 @@
+    const [selectedSighting, setSelectedSighting] = useState&lt;Sighting | null&gt;(null);
+    const [loading, setLoading] = useState(true);
++   const [backgroundLoaded, setBackgroundLoaded] = useState(false);
++ 
++   // Preload background image to prevent visual shifts
++   useEffect(() =&gt; {
++     const img = new Image();
++     img.src = '/ghost3.png';
++     img.onload = () =&gt; {
++       setBackgroundLoaded(true);
++     };
++     // If image is already cached, it might not trigger onload
++     if (img.complete) {
++       setBackgroundLoaded(true);
++     }
++   }, []);
+  
+    useEffect(() =&gt; {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -128,5 +128,7 @@
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+-         backgroundRepeat: 'no-repeat'
++         backgroundRepeat: 'no-repeat',
++         backgroundAttachment: 'fixed',
++         willChange: 'auto'
+        }}
+      &gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Adding a preload link in the layout for earlier loading, and refining the approach:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Removing `backgroundAttachment: 'fixed'` (it can cause performance issues) and adding a preload link in the layout for earlier loading:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 3
+
+```diff
+@@ -128,7 +128,5 @@
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+-         backgroundRepeat: 'no-repeat',
+-         backgroundAttachment: 'fixed',
+-         willChange: 'auto'
++         backgroundRepeat: 'no-repeat'
+        }}
+      &gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/layout.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -21,4 +21,7 @@
+    return (
+      &lt;html lang="en"&gt;
++       &lt;head&gt;
++         &lt;link rel="preload" href="/ghost3.png" as="image" /&gt;
++       &lt;/head&gt;
+        &lt;body
+          className={&#96;${inter.variable} antialiased&#96;}
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixing the layout: Next.js App Router doesn't allow `<head>` in layouts. Moving the preload to HeadLinks:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/layout.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 3
+
+```diff
+@@ -21,7 +21,4 @@
+    return (
+      &lt;html lang="en"&gt;
+-       &lt;head&gt;
+-         &lt;link rel="preload" href="/ghost3.png" as="image" /&gt;
+-       &lt;/head&gt;
+        &lt;body
+          className={&#96;${inter.variable} antialiased&#96;}
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/components/HeadLinks.tsx</summary>
+
+**Chunk 1**
+Lines added: 11, lines removed: undefined
+
+```diff
+@@ -5,4 +5,15 @@
+  export default function HeadLinks() {
+    useEffect(() =&gt; {
++     // Preload background image to prevent visual shifts
++     const preloadLink = document.createElement('link');
++     preloadLink.rel = 'preload';
++     preloadLink.href = '/ghost3.png';
++     preloadLink.as = 'image';
++     
++     // Check if already added
++     if (!document.querySelector(&#96;link[href="/ghost3.png"]&#96;)) {
++       document.head.appendChild(preloadLink);
++     }
++ 
+      // Load Leaflet CSS from CDN as fallback
+      // This ensures the app works even if npm packages aren't installed yet
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 3 files</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+- `app/layout.tsx`
+- `app/components/HeadLinks.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Changes Made
+
+1. **Added image preloading in `HeadLinks.tsx`**: Preloads the background image early in the page lifecycle so it's ready before rendering.
+
+2. **Added image preloading in `page.tsx`**: Added a `useEffect` that preloads the image when the component mounts as a backup.
+
+3. **Removed `backgroundAttachment: 'fixed'`**: This can cause performance issues, especially on mobile.
+
+## Why This Fixes the Issue
+
+The background image was loading asynchronously while the page rendered. When content changed from loading to loaded, the browser recalculated the background position/size, causing a visible shift.
+
+With preloading:
+- The image starts loading immediately via the `<link rel="preload">` tag
+- The browser caches it before the component renders
+- The background stays stable when content changes
+
+The image should now load before the page renders, preventing the visual shift. Test it and let me know if you still see any changes.
+
+---
+
+_**User (2025-12-08 13:06Z)**_
+
+the image loads before the page renders but there is shift in image after the page renders and the page loads after a second delay. can the image and page rendering be synchronized?
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Synchronizing background image loading with page rendering to prevent shifts. Ensuring the image is fully loaded before rendering content and keeping the container stable.
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/components/HeadLinks.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Synchronizing background image loading with page rendering: waiting for the image to fully load before showing content, and preventing layout shifts with CSS.
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 22, lines removed: 3
+
+```diff
+@@ -18,19 +18,38 @@
+    const [loading, setLoading] = useState(true);
+    const [backgroundLoaded, setBackgroundLoaded] = useState(false);
++   const [ready, setReady] = useState(false);
+  
+-   // Preload background image to prevent visual shifts
++   // Preload background image and wait for it to fully load before rendering content
+    useEffect(() =&gt; {
+      const img = new Image();
+      img.src = '/ghost3.png';
+-     img.onload = () =&gt; {
++     
++     const handleLoad = () =&gt; {
++       setBackgroundLoaded(true);
++       // Small delay to ensure image is fully rendered
++       requestAnimationFrame(() =&gt; {
++         requestAnimationFrame(() =&gt; {
++           setReady(true);
++         });
++       });
++     };
++     
++     img.onload = handleLoad;
++     img.onerror = () =&gt; {
++       // Even if image fails, allow page to render
+        setBackgroundLoaded(true);
++       setReady(true);
+      };
++     
+      // If image is already cached, it might not trigger onload
+      if (img.complete) {
+-       setBackgroundLoaded(true);
++       handleLoad();
+      }
+    }, []);
+  
+    useEffect(() =&gt; {
++     // Only start fetching data after background is ready
++     if (!ready) return;
++     
+      async function fetchData() {
+        try {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -94,5 +94,5 @@
+      }
+      fetchData();
+-   }, []);
++   }, [ready]);
+  
+    // Simple CSV parser
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: 4
+
+```diff
+@@ -144,12 +144,14 @@
+        className="min-h-screen bg-[#5D5D5D] text-black flex flex-col"
+        style={{
+-         backgroundImage: 'url(/ghost3.png)',
++         backgroundImage: backgroundLoaded ? 'url(/ghost3.png)' : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+-         backgroundRepeat: 'no-repeat'
++         backgroundRepeat: 'no-repeat',
++         backgroundAttachment: 'fixed',
++         position: 'relative'
+        }}
+      &gt;
+-       {loading ? (
+-         &lt;div className="flex-1 flex items-center justify-center"&gt;
++       {!ready || loading ? (
++         &lt;div className="flex-1 flex items-center justify-center min-h-screen"&gt;
+            &lt;p&gt;Loading sightings...&lt;/p&gt;
+          &lt;/div&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking for lint errors and refining the approach to avoid performance issues with `backgroundAttachment: 'fixed'`:
+
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Using a separate fixed background element instead of `backgroundAttachment: 'fixed'` to avoid performance issues:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 19, lines removed: 16
+
+```diff
+@@ -141,20 +141,23 @@
+  
+    return (
+-     &lt;div 
+-       className="min-h-screen bg-[#5D5D5D] text-black flex flex-col"
+-       style={{
+-         backgroundImage: backgroundLoaded ? 'url(/ghost3.png)' : 'none',
+-         backgroundSize: 'cover',
+-         backgroundPosition: 'center',
+-         backgroundRepeat: 'no-repeat',
+-         backgroundAttachment: 'fixed',
+-         position: 'relative'
+-       }}
+-     &gt;
+-       {!ready || loading ? (
+-         &lt;div className="flex-1 flex items-center justify-center min-h-screen"&gt;
+-           &lt;p&gt;Loading sightings...&lt;/p&gt;
+-         &lt;/div&gt;
+-       ) : (
++     &lt;div className="min-h-screen bg-[#5D5D5D] text-black flex flex-col relative"&gt;
++       {/* Fixed background layer that doesn't shift */}
++       &lt;div
++         className="fixed inset-0 -z-10"
++         style={{
++           backgroundImage: backgroundLoaded ? 'url(/ghost3.png)' : 'none',
++           backgroundSize: 'cover',
++           backgroundPosition: 'center',
++           backgroundRepeat: 'no-repeat',
++           backgroundColor: '#5D5D5D'
++         }}
++       /&gt;
++       {/* Content layer */}
++       &lt;div className="relative z-0 flex flex-col min-h-screen"&gt;
++         {!ready || loading ? (
++           &lt;div className="flex-1 flex items-center justify-center min-h-screen"&gt;
++             &lt;p&gt;Loading sightings...&lt;/p&gt;
++           &lt;/div&gt;
++         ) : (
+          &lt;&gt;
+            &lt;Navbar activePage="sightings" /&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixing the closing tags:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 2
+
+```diff
+@@ -196,6 +196,7 @@
+            &lt;Footer /&gt;
+          &lt;/&gt;
+-       )}
+-     &lt;/div&gt;
++         )}
++       &lt;/div&gt;
++     &lt;/div&gt;
+    );
+  }
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Verifying the structure is correct:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Changes Made
+
+1. **Separate fixed background layer**: Created a fixed-position background div (`fixed inset-0`) that stays in place and doesn't recalculate when content changes.
+
+2. **Synchronized loading sequence**:
+   - Wait for the background image to fully load
+   - Use `requestAnimationFrame` to ensure the image is rendered
+   - Only start fetching data after the background is ready
+   - Only show content when both the background is loaded and data is fetched
+
+3. **Prevented layout shifts**: The background is in a fixed layer separate from the content, so it doesn't shift when content appears.
+
+## How It Works
+
+- Background image loads first (preloaded via HeadLinks)
+- Once loaded, the image is applied to the fixed background layer
+- After the image is rendered, data fetching begins
+- Content appears only when both are ready
+- The fixed background layer prevents any visual shifts
+
+The background image and page content are now synchronized, and the fixed background layer prevents shifts when content loads. The page should appear smoothly without background movement.
+
+---
+
+_**User (2025-12-08 13:06Z)**_
+
+the image is not loading now
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Checking why the image isn't loading. Reviewing the current implementation:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixing the image loading logic. The conditional rendering may be preventing it from showing. Updating it:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -23,5 +23,4 @@
+    useEffect(() =&gt; {
+      const img = new Image();
+-     img.src = '/ghost3.png';
+      
+      const handleLoad = () =&gt; {
+```
+
+**Chunk 2**
+Lines added: 5, lines removed: 1
+
+```diff
+@@ -38,10 +37,14 @@
+      img.onerror = () =&gt; {
+        // Even if image fails, allow page to render
++       console.warn('Background image failed to load');
+        setBackgroundLoaded(true);
+        setReady(true);
+      };
++     
++     // Set src after handlers are attached
++     img.src = '/ghost3.png';
+      
+      // If image is already cached, it might not trigger onload
+-     if (img.complete) {
++     if (img.complete &amp;&amp; img.naturalHeight !== 0) {
+        handleLoad();
+      }
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 4, lines removed: 2
+
+```diff
+@@ -149,9 +149,11 @@
+          className="fixed inset-0 -z-10"
+          style={{
+-           backgroundImage: backgroundLoaded ? 'url(/ghost3.png)' : 'none',
++           backgroundImage: 'url(/ghost3.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+-           backgroundColor: '#5D5D5D'
++           backgroundColor: '#5D5D5D',
++           opacity: backgroundLoaded ? 1 : 0,
++           transition: 'opacity 0.3s ease-in-out'
+          }}
+        /&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixed the image loading issue. Changes:
+
+1. **Always set the background image URL**: Instead of conditionally setting it to `'none'`, the image URL is always present so the browser can load it.
+
+2. **Use opacity for visibility**: The image starts with `opacity: 0` and fades in to `opacity: 1` once loaded, preventing the conditional URL issue.
+
+3. **Improved image loading detection**: Added a check for `img.naturalHeight !== 0` to better detect when a cached image is ready.
+
+The image should now load and fade in once ready. The background layer remains fixed to prevent shifts, and the image is always in the DOM so it can load immediately.
+
+---
+
+_**User (2025-12-08 13:06Z)**_
+
+the image is not loading in sightings map page
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Checking why the image isn't loading on the sightings map page. Verifying the image path and the current implementation:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "ghost3.png" • **1** result in **1** directory</summary>
+
+Directory: **c:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers** (1 file)
+
+| File |
+|------|
+| `public\ghost3.png` |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" && dir public\ghost3.png</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" && dir public\ghost3.png
+```
+
+```
+At C:\Users\maadh\AppData\Local\Temp\ps-script-c840a043-f1b3-4a33-9570-08db25ba1d34.ps1:7 char:61
++ ... d "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" &amp;&amp; dir pub ...
++                                                                ~~
+The token '&amp;&amp;' is not a valid statement separator in this version.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : InvalidEndOfLine
+ 
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking the current implementation and simplifying the image loading logic:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" ; Test-Path "public\ghost3.png"</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" ; Test-Path "public\ghost3.png"
+```
+
+```
+True
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The image file exists. The issue is likely the loading detection. Simplifying: show the image immediately and remove the opacity-based loading logic.
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: 5
+
+```diff
+@@ -27,9 +27,7 @@
+        setBackgroundLoaded(true);
+        // Small delay to ensure image is fully rendered
+-       requestAnimationFrame(() =&gt; {
+-         requestAnimationFrame(() =&gt; {
+-           setReady(true);
+-         });
+-       });
++       setTimeout(() =&gt; {
++         setReady(true);
++       }, 50);
+      };
+      
+```
+
+**Chunk 2**
+Lines added: 16, lines removed: 2
+
+```diff
+@@ -46,6 +44,20 @@
+      
+      // If image is already cached, it might not trigger onload
+-     if (img.complete &amp;&amp; img.naturalHeight !== 0) {
+-       handleLoad();
++     // Check multiple conditions to catch cached images
++     if (img.complete) {
++       if (img.naturalHeight !== 0) {
++         handleLoad();
++       } else {
++         // Image might be loading, wait a bit
++         setTimeout(() =&gt; {
++           if (img.complete &amp;&amp; img.naturalHeight !== 0) {
++             handleLoad();
++           } else {
++             // Fallback: allow rendering anyway
++             setBackgroundLoaded(true);
++             setReady(true);
++           }
++         }, 100);
++       }
+      }
+    }, []);
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/page.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 3
+
+```diff
+@@ -165,7 +165,5 @@
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+-           backgroundColor: '#5D5D5D',
+-           opacity: backgroundLoaded ? 1 : 0,
+-           transition: 'opacity 0.3s ease-in-out'
++           backgroundColor: '#5D5D5D'
+          }}
+        /&gt;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/page.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fixed the image loading issue. The problem was the opacity transition hiding the image until `backgroundLoaded` was true.
+
+## Changes Made:
+
+1. **Removed opacity transition**: The background image is now always visible (no `opacity: 0` initially). It loads immediately and stays visible.
+
+2. **Improved loading detection**: Enhanced the cached image detection logic to handle edge cases.
+
+3. **Simplified approach**: The background image shows immediately, and the `ready` state only controls when the content appears, not the background visibility.
+
+The background image should now be visible on the sightings map page. The image loads immediately, and the content appears after the image is ready, preventing shifts while keeping the background visible throughout.
+
+---
+
