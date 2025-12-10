@@ -107,6 +107,38 @@ export function parseCSV(csvText: string): Sighting[] {
 
 // Convert database row to Sighting interface
 export function dbRowToSighting(row: any): Sighting {
+  // Handle actual_time - it might be a TIME type from PostgreSQL
+  // which could be in format "HH:MM:SS" or just "HH:MM"
+  let actualTime: string | undefined = undefined;
+  
+  if (row.actual_time !== null && row.actual_time !== undefined) {
+    // If it's a TIME type, it might include seconds, so extract just HH:MM
+    const timeStr = String(row.actual_time).trim();
+    if (timeStr && timeStr !== 'null' && timeStr !== 'undefined') {
+      if (timeStr.includes(':')) {
+        const parts = timeStr.split(':');
+        if (parts.length >= 2) {
+          actualTime = `${parts[0]}:${parts[1]}`; // Keep only HH:MM
+        } else {
+          actualTime = timeStr;
+        }
+      } else {
+        actualTime = timeStr;
+      }
+    }
+  }
+  
+  // Debug logging for first sighting
+  if (row.id && !globalThis._loggedFirstSighting) {
+    console.log('dbRowToSighting - Sample row:', {
+      id: row.id,
+      raw_actual_time: row.actual_time,
+      processed_actualTime: actualTime,
+      time_of_day: row.time_of_day
+    });
+    globalThis._loggedFirstSighting = true;
+  }
+  
   return {
     date: row.sighting_date || row.date_of_sighting || '',
     latitude: row.latitude || 0,
@@ -115,7 +147,7 @@ export function dbRowToSighting(row: any): Sighting {
     state: row.us_state || row.state || '',
     notes: row.notes || '',
     timeOfDay: row.time_of_day || '',
-    actualTime: row.actual_time || undefined, // Map the actual_time field
+    actualTime: actualTime, // Map the actual_time field
     tag: row.tag_of_apparition || '',
     imageLink: row.image_link || '',
   };

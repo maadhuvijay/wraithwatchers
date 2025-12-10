@@ -22,16 +22,29 @@ export default function SightingPopup({ sighting, onClose }: SightingPopupProps)
 
   const formatTime = (timeOfDay: string, actualTime?: string) => {
     // If we have the actual time, use it and format it nicely
-    if (actualTime) {
-      // Handle TIME format (HH:MM:SS) or HH:MM format
-      const timeParts = actualTime.split(':');
-      const hour = parseInt(timeParts[0], 10);
-      const min = timeParts[1] || '00';
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      // Ensure minutes are always 2 digits
-      const paddedMin = min.padStart(2, '0');
-      return `${displayHour}:${paddedMin} ${period}`;
+    if (actualTime !== undefined && actualTime !== null && String(actualTime).trim() !== '') {
+      try {
+        // Handle TIME format (HH:MM:SS) or HH:MM format
+        // Remove any whitespace and split by colon
+        const cleanTime = String(actualTime).trim();
+        const timeParts = cleanTime.split(':');
+        
+        if (timeParts.length >= 2) {
+          const hour = parseInt(timeParts[0], 10);
+          const min = timeParts[1] || '00';
+          
+          // Validate hour is a number
+          if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+            const period = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+            // Ensure minutes are always 2 digits, remove seconds if present
+            const paddedMin = min.substring(0, 2).padStart(2, '0');
+            return `${displayHour}:${paddedMin} ${period}`;
+          }
+        }
+      } catch (error) {
+        console.warn('Error formatting actualTime:', actualTime, error);
+      }
     }
     
     // Fallback to time of day category if actual time is not available

@@ -980,3 +980,950 @@ Try submitting a sighting again; it should work even without the migration, but 
 
 ---
 
+_**User (2025-12-10 00:12Z)**_
+
+The time of sighting in the sighting map is still showing 10pm est
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Checking how the time is displayed in the sightings map:
+
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "sightings map display time of sighting popup marker" • **10** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `app/components/SightingPopup.tsx` | L1-80 |
+| `app/components/SightingsMap.tsx` | L5-165 |
+| `app/components/SightingsMap.tsx` | L165 |
+| `app/page.tsx` | L10-228 |
+| `app/components/SightingPopup.tsx` | L80 |
+| `app/lib/utils.ts` | L11 |
+| `app/page.tsx` | L228 |
+| `app/components/LocationMap.tsx` | L8-173 |
+| `app/lib/utils.ts` | L13-59 |
+| `app/components/SightingsTable.tsx` | L5-112 |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "*SightingsMap*.tsx" • **1** result in **1** directory</summary>
+
+Directory: **c:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers** (1 file)
+
+| File |
+|------|
+| `app\components\SightingsMap.tsx` |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "10:00 PM|10pm|time.*sighting" • 6 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `.\app\components\SightingPopup.tsx` | `'Night': '10:00 PM',` | L43 |
+| `.\app\components\SightingPopup.tsx` | `<p><strong>Time of Sighting:</strong> \{formatTime(sighting.timeOfDay, sighting.actualTime)\} EST</p>` | L74 |
+| `.\app\components\SightingsTable.tsx` | `<td className="p-2">\{formatTime(sighting.timeOfDay, sighting.actualTime)\}</td>` | L81 |
+| `.\app\post\page.tsx` | `<label className="block text-sm font-medium mb-2 text-[#F79486]">Time of Sighting</label>` | L137 |
+| `.\README.md` | `- Real-time sighting submissions` | L87 |
+| `.\SUPABASE_SETUP.md` | `3. Implement real-time updates for new sightings` | L134 |
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking how data is fetched and whether `actualTime` is properly retrieved. The popup is updated, but existing sightings may not have `actualTime`. Verifying the data flow:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/utils.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/components/SightingPopup.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "fetch sightings from database API GET endpoint select actual_time" • **9** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `app/lib/loadSightings.ts` | L18 |
+| `app/page.tsx` | L228 |
+| `app/page.tsx` | L10-228 |
+| `app/components/SightingsTable.tsx` | L5-112 |
+| `app/lib/utils.ts` | L11 |
+| `app/lib/utils.ts` | L19-105 |
+| `app/lib/utils.ts` | L13-59 |
+| `app/components/SightingPopup.tsx` | L1-80 |
+| `app/post/page.tsx` | L6-207 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking the API GET endpoint to ensure `actual_time` is selected, and verifying the time format handling:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_cmd">
+<details><summary>Tool use: **run_terminal_cmd** • Run command: cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" && echo "Checking if we can test the API response format"</summary>
+
+```bash
+cd "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" && echo "Checking if we can test the API response format"
+```
+
+```
+At C:\Users\maadh\AppData\Local\Temp\ps-script-b3705607-297a-4e85-b4be-49c3972e1faa.ps1:7 char:61
++ ... d "C:\Users\maadh\Git Local\AI-Accelerator\wraithwatchers" &amp;&amp; echo "C ...
++                                                                ~~
+The token '&amp;&amp;' is not a valid statement separator in this version.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : InvalidEndOfLine
+ 
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Likely causes:
+1. The migration hasn't been run, so `actual_time` isn't saved.
+2. Existing sightings don't have `actual_time`.
+3. The time format from the database may need adjustment.
+
+Checking how the database returns the time and improving the handling:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/utils.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/lib/utils.ts</summary>
+
+**Chunk 1**
+Lines added: 12, lines removed: undefined
+
+```diff
+@@ -108,4 +108,16 @@
+  // Convert database row to Sighting interface
+  export function dbRowToSighting(row: any): Sighting {
++   // Handle actual_time - it might be a TIME type from PostgreSQL
++   // which could be in format "HH:MM:SS" or just "HH:MM"
++   let actualTime = row.actual_time;
++   if (actualTime) {
++     // If it's a TIME type, it might include seconds, so extract just HH:MM
++     const timeStr = String(actualTime);
++     if (timeStr.includes(':')) {
++       const parts = timeStr.split(':');
++       actualTime = &#96;${parts[0]}:${parts[1]}&#96;; // Keep only HH:MM
++     }
++   }
++   
+    return {
+      date: row.sighting_date || row.date_of_sighting || '',
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -116,5 +128,5 @@
+      notes: row.notes || '',
+      timeOfDay: row.time_of_day || '',
+-     actualTime: row.actual_time || undefined, // Map the actual_time field
++     actualTime: actualTime || undefined, // Map the actual_time field
+      tag: row.tag_of_apparition || '',
+      imageLink: row.image_link || '',
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/components/SightingPopup.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The issue is that existing sightings don't have `actual_time`, so they fall back to the category time. The popup shows "10:00 PM" for "Night" when `actualTime` is missing.
+
+Adding debug logging and improving the time handling. Verifying the migration was run and that new sightings save `actual_time` correctly:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/components/SightingPopup.tsx</summary>
+
+**Chunk 1**
+Lines added: 23, lines removed: 10
+
+```diff
+@@ -23,14 +23,27 @@
+    const formatTime = (timeOfDay: string, actualTime?: string) =&gt; {
+      // If we have the actual time, use it and format it nicely
+-     if (actualTime) {
+-       // Handle TIME format (HH:MM:SS) or HH:MM format
+-       const timeParts = actualTime.split(':');
+-       const hour = parseInt(timeParts[0], 10);
+-       const min = timeParts[1] || '00';
+-       const period = hour &gt;= 12 ? 'PM' : 'AM';
+-       const displayHour = hour === 0 ? 12 : hour &gt; 12 ? hour - 12 : hour;
+-       // Ensure minutes are always 2 digits
+-       const paddedMin = min.padStart(2, '0');
+-       return &#96;${displayHour}:${paddedMin} ${period}&#96;;
++     if (actualTime &amp;&amp; actualTime.trim() !== '') {
++       try {
++         // Handle TIME format (HH:MM:SS) or HH:MM format
++         // Remove any whitespace and split by colon
++         const cleanTime = actualTime.trim();
++         const timeParts = cleanTime.split(':');
++         
++         if (timeParts.length &gt;= 2) {
++           const hour = parseInt(timeParts[0], 10);
++           const min = timeParts[1] || '00';
++           
++           // Validate hour is a number
++           if (!isNaN(hour) &amp;&amp; hour &gt;= 0 &amp;&amp; hour &lt;= 23) {
++             const period = hour &gt;= 12 ? 'PM' : 'AM';
++             const displayHour = hour === 0 ? 12 : hour &gt; 12 ? hour - 12 : hour;
++             // Ensure minutes are always 2 digits, remove seconds if present
++             const paddedMin = min.substring(0, 2).padStart(2, '0');
++             return &#96;${displayHour}:${paddedMin} ${period}&#96;;
++           }
++         }
++       } catch (error) {
++         console.warn('Error formatting actualTime:', actualTime, error);
++       }
+      }
+      
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 2 files</summary>
+      
+Lint paths:
+
+- `app/lib/utils.ts`
+- `app/components/SightingPopup.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The issue is that existing sightings don't have `actual_time`, so they fall back to the category time. If new sightings also show 10pm, the migration likely hasn't been run, so `actual_time` isn't being saved.
+
+Adding a console log to verify `actual_time` is being saved and retrieved:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 9, lines removed: 1
+
+```diff
+@@ -133,5 +133,13 @@
+      // Convert database row to Sighting interface
+      const sighting = dbRowToSighting(data);
+- 
++     
++     // Log for debugging - check if actual_time was saved
++     console.log('Sighting saved:', {
++       id: data.id,
++       time_of_day: data.time_of_day,
++       actual_time: data.actual_time,
++       mapped_actualTime: sighting.actualTime
++     });
++ 
+      return NextResponse.json(
+        { 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Adding logging to the GET endpoint to verify data retrieval:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 10, lines removed: 1
+
+```diff
+@@ -45,5 +45,14 @@
+      // Convert database rows to Sighting interface
+      const sightings = (data || []).map(dbRowToSighting);
+- 
++     
++     // Log first sighting for debugging actual_time retrieval
++     if (sightings.length &gt; 0) {
++       console.log('Sample sighting data:', {
++         time_of_day: sightings[0].timeOfDay,
++         actualTime: sightings[0].actualTime,
++         raw_actual_time: data?.[0]?.actual_time
++       });
++     }
++ 
+      return NextResponse.json({ sightings }, { status: 200 });
+    } catch (error) {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/api/sightings/route.ts`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+## Summary
+
+The code is updated to display the actual time. The issue is likely that:
+
+1. The database migration hasn't been run — the `actual_time` column doesn't exist yet
+2. Existing sightings don't have `actual_time` values, so they fall back to the category time
+
+## What to do
+
+1. Run the migration in your Supabase dashboard:
+   - Go to SQL Editor
+   - Run this SQL:
+   ```sql
+   ALTER TABLE public.ghost_sightings 
+   ADD COLUMN IF NOT EXISTS actual_time TIME;
+   ```
+
+2. After running the migration:
+   - New sightings will save and display the exact time you enter
+   - Existing sightings will still show the category time (e.g., "10:00 PM" for "Night") because they don't have `actual_time` values
+
+3. Test with a new sighting:
+   - Submit a new sighting with a specific time (e.g., 2:30 PM)
+   - It should display "2:30 PM EST" instead of "10:00 PM EST"
+
+## Debugging
+
+I've added console logging. Check your server console (where you run `npm run dev`) when:
+- Submitting a new sighting — it will log whether `actual_time` was saved
+- Loading sightings — it will log a sample sighting to show if `actual_time` is being retrieved
+
+If you've already run the migration and new sightings still show 10pm, check the console logs to see what's happening.
+
+---
+
+_**User (2025-12-10 00:12Z)**_
+
+I gave a time of sighting as 5.16 am but it is showing as 8 am 
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Investigating why 5:16 AM is showing as 8:00 AM. Checking the time conversion logic and verifying that `actual_time` is being saved and retrieved correctly:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/components/SightingPopup.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "time format conversion 5:16 AM morning category" • **9** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `app/components/SightingPopup.tsx` | L1-93 |
+| `app/page.tsx` | L10-228 |
+| `app/lib/utils.ts` | L13-59 |
+| `app/lib/utils.ts` | L11 |
+| `app/lib/utils.ts` | L19-105 |
+| `app/components/SightingsTable.tsx` | L5-112 |
+| `app/post/page.tsx` | L6-207 |
+| `app/page.tsx` | L228 |
+| `app/components/StatsCards.tsx` | L23 |
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+5:16 AM is categorized as "Morning" (which displays as "8:00 AM"), indicating `actualTime` isn't being used. Checking how the database returns the time and fixing the mapping:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/utils.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/components/SightingPopup.tsx</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 2
+
+```diff
+@@ -22,10 +22,13 @@
+  
+    const formatTime = (timeOfDay: string, actualTime?: string) =&gt; {
++     // Debug logging
++     console.log('formatTime called:', { timeOfDay, actualTime, actualTimeType: typeof actualTime });
++     
+      // If we have the actual time, use it and format it nicely
+-     if (actualTime &amp;&amp; actualTime.trim() !== '') {
++     if (actualTime !== undefined &amp;&amp; actualTime !== null &amp;&amp; String(actualTime).trim() !== '') {
+        try {
+          // Handle TIME format (HH:MM:SS) or HH:MM format
+          // Remove any whitespace and split by colon
+-         const cleanTime = actualTime.trim();
++         const cleanTime = String(actualTime).trim();
+          const timeParts = cleanTime.split(':');
+          
+```
+
+**Chunk 2**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -40,5 +43,7 @@
+              // Ensure minutes are always 2 digits, remove seconds if present
+              const paddedMin = min.substring(0, 2).padStart(2, '0');
+-             return &#96;${displayHour}:${paddedMin} ${period}&#96;;
++             const formatted = &#96;${displayHour}:${paddedMin} ${period}&#96;;
++             console.log('Formatted time:', formatted);
++             return formatted;
+            }
+          }
+```
+
+**Chunk 3**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -49,4 +54,5 @@
+      
+      // Fallback to time of day category if actual time is not available
++     console.log('Falling back to category time for:', timeOfDay);
+      const timeMap: Record&lt;string, string&gt; = {
+        'Dawn': '5:00 AM',
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/lib/utils.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Improving the time mapping and adding debug logs. The issue is likely that `actualTime` is null or not being retrieved. Adding better handling and logging:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/lib/utils.ts</summary>
+
+**Chunk 1**
+Lines added: 26, lines removed: 6
+
+```diff
+@@ -110,13 +110,33 @@
+    // Handle actual_time - it might be a TIME type from PostgreSQL
+    // which could be in format "HH:MM:SS" or just "HH:MM"
+-   let actualTime = row.actual_time;
+-   if (actualTime) {
++   let actualTime: string | undefined = undefined;
++   
++   if (row.actual_time !== null &amp;&amp; row.actual_time !== undefined) {
+      // If it's a TIME type, it might include seconds, so extract just HH:MM
+-     const timeStr = String(actualTime);
+-     if (timeStr.includes(':')) {
+-       const parts = timeStr.split(':');
+-       actualTime = &#96;${parts[0]}:${parts[1]}&#96;; // Keep only HH:MM
++     const timeStr = String(row.actual_time).trim();
++     if (timeStr &amp;&amp; timeStr !== 'null' &amp;&amp; timeStr !== 'undefined') {
++       if (timeStr.includes(':')) {
++         const parts = timeStr.split(':');
++         if (parts.length &gt;= 2) {
++           actualTime = &#96;${parts[0]}:${parts[1]}&#96;; // Keep only HH:MM
++         } else {
++           actualTime = timeStr;
++         }
++       } else {
++         actualTime = timeStr;
++       }
+      }
+    }
++   
++   // Debug logging for first sighting
++   if (row.id &amp;&amp; !globalThis._loggedFirstSighting) {
++     console.log('dbRowToSighting - Sample row:', {
++       id: row.id,
++       raw_actual_time: row.actual_time,
++       processed_actualTime: actualTime,
++       time_of_day: row.time_of_day
++     });
++     globalThis._loggedFirstSighting = true;
++   }
+    
+    return {
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -128,5 +148,5 @@
+      notes: row.notes || '',
+      timeOfDay: row.time_of_day || '',
+-     actualTime: actualTime || undefined, // Map the actual_time field
++     actualTime: actualTime, // Map the actual_time field
+      tag: row.tag_of_apparition || '',
+      imageLink: row.image_link || '',
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 2 files</summary>
+      
+Lint paths:
+
+- `app/lib/utils.ts`
+- `app/components/SightingPopup.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Removing verbose console logs from the component and keeping server-side logging. Checking the form to ensure the time is sent correctly:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/post/page.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/components/SightingPopup.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 3
+
+```diff
+@@ -22,7 +22,4 @@
+  
+    const formatTime = (timeOfDay: string, actualTime?: string) =&gt; {
+-     // Debug logging
+-     console.log('formatTime called:', { timeOfDay, actualTime, actualTimeType: typeof actualTime });
+-     
+      // If we have the actual time, use it and format it nicely
+      if (actualTime !== undefined &amp;&amp; actualTime !== null &amp;&amp; String(actualTime).trim() !== '') {
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/components/SightingPopup.tsx</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: 3
+
+```diff
+@@ -40,7 +40,5 @@
+              // Ensure minutes are always 2 digits, remove seconds if present
+              const paddedMin = min.substring(0, 2).padStart(2, '0');
+-             const formatted = &#96;${displayHour}:${paddedMin} ${period}&#96;;
+-             console.log('Formatted time:', formatted);
+-             return formatted;
++             return &#96;${displayHour}:${paddedMin} ${period}&#96;;
+            }
+          }
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/components/SightingPopup.tsx</summary>
+
+**Chunk 1**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -49,5 +49,4 @@
+      
+      // Fallback to time of day category if actual time is not available
+-     console.log('Falling back to category time for:', timeOfDay);
+      const timeMap: Record&lt;string, string&gt; = {
+        'Dawn': '5:00 AM',
+```
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+Checking the server console logs. The issue is likely that `actual_time` isn't being saved or retrieved. Verifying the time format and adding a check to see if the column exists:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: app/api/sightings/route.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/components/SightingPopup.tsx`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+The issue is that `actual_time` isn't being saved or retrieved. Since 5:16 AM shows as 8:00 AM (the "Morning" category), `actualTime` is missing and it's falling back to the category.
+
+Check your server console (where you run `npm run dev`) when you submit a sighting. You should see logs like:
+- "Sighting saved:" with `actual_time` value
+- "Sample sighting data:" when loading sightings
+
+Most likely, the migration hasn't been run, so the `actual_time` column doesn't exist. Verifying the time format and ensuring it's saved correctly:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **search_replace** • Edit file: app/api/sightings/route.ts</summary>
+
+**Chunk 1**
+Lines added: 6, lines removed: 3
+
+```diff
+@@ -113,16 +113,19 @@
+      // Try to include actual_time, but handle gracefully if column doesn't exist
+      // First attempt: try with actual_time
++     // The time from HTML input is in HH:MM format (24-hour), which PostgreSQL TIME accepts
++     console.log('Attempting to save sighting with time:', time);
+      let { data, error } = await supabase
+        .from('ghost_sightings')
+        .insert({
+          ...insertData,
+-         actual_time: time, // Store the actual time entered by the user
++         actual_time: time, // Store the actual time entered by the user (HH:MM format)
+        })
+        .select()
+        .single();
+  
+      // If error is about missing column, retry without actual_time
+-     if (error &amp;&amp; error.message?.includes('actual_time')) {
+-       console.warn('actual_time column not found, saving without it. Please run migration 002_add_actual_time_field.sql');
++     if (error &amp;&amp; (error.message?.includes('actual_time') || error.message?.includes('column') || error.code === '42703')) {
++       console.warn('⚠️ actual_time column not found! Saving without it. Please run migration 002_add_actual_time_field.sql');
++       console.warn('Error details:', error.message);
+        ({ data, error } = await supabase
+          .from('ghost_sightings')
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 1 file</summary>
+      
+Lint paths:
+
+- `app/api/sightings/route.ts`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+## The Problem
+
+When you enter **5:16 AM**, it's being categorized as "Morning" (which displays as "8:00 AM") because the `actual_time` value isn't being saved or retrieved. This usually means the database migration hasn't been run yet.
+
+## What to Do
+
+1. Check your server console (where you run `npm run dev`) when submitting a sighting. You should see:
+   - "Attempting to save sighting with time: 05:16"
+   - If the column doesn't exist: "⚠️ actual_time column not found!"
+   - "Sighting saved:" with the `actual_time` value
+
+2. Run the database migration:
+   - Go to your Supabase dashboard → SQL Editor
+   - Run this SQL:
+   ```sql
+   ALTER TABLE public.ghost_sightings 
+   ADD COLUMN IF NOT EXISTS actual_time TIME;
+   ```
+
+3. After running the migration:
+   - Submit a new sighting with 5:16 AM
+   - It should display "5:16 AM EST" instead of "8:00 AM EST"
+
+## Why This Happens
+
+- The HTML time input sends "05:16" (24-hour format)
+- Without the `actual_time` column, the API falls back to saving without it
+- The time gets categorized as "Morning" (5 AM - 11:59 AM)
+- The popup shows "Morning" as "8:00 AM" because `actualTime` is missing
+
+After running the migration, new sightings will save and display the exact time you enter. Check your server console logs to confirm whether the column exists.
+
+---
+

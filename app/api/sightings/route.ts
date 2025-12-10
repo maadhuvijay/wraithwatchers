@@ -44,6 +44,15 @@ export async function GET() {
 
     // Convert database rows to Sighting interface
     const sightings = (data || []).map(dbRowToSighting);
+    
+    // Log first sighting for debugging actual_time retrieval
+    if (sightings.length > 0) {
+      console.log('Sample sighting data:', {
+        time_of_day: sightings[0].timeOfDay,
+        actualTime: sightings[0].actualTime,
+        raw_actual_time: data?.[0]?.actual_time
+      });
+    }
 
     return NextResponse.json({ sightings }, { status: 200 });
   } catch (error) {
@@ -103,18 +112,21 @@ export async function POST(request: NextRequest) {
 
     // Try to include actual_time, but handle gracefully if column doesn't exist
     // First attempt: try with actual_time
+    // The time from HTML input is in HH:MM format (24-hour), which PostgreSQL TIME accepts
+    console.log('Attempting to save sighting with time:', time);
     let { data, error } = await supabase
       .from('ghost_sightings')
       .insert({
         ...insertData,
-        actual_time: time, // Store the actual time entered by the user
+        actual_time: time, // Store the actual time entered by the user (HH:MM format)
       })
       .select()
       .single();
 
     // If error is about missing column, retry without actual_time
-    if (error && error.message?.includes('actual_time')) {
-      console.warn('actual_time column not found, saving without it. Please run migration 002_add_actual_time_field.sql');
+    if (error && (error.message?.includes('actual_time') || error.message?.includes('column') || error.code === '42703')) {
+      console.warn('⚠️ actual_time column not found! Saving without it. Please run migration 002_add_actual_time_field.sql');
+      console.warn('Error details:', error.message);
       ({ data, error } = await supabase
         .from('ghost_sightings')
         .insert(insertData)
@@ -132,6 +144,14 @@ export async function POST(request: NextRequest) {
 
     // Convert database row to Sighting interface
     const sighting = dbRowToSighting(data);
+    
+    // Log for debugging - check if actual_time was saved
+    console.log('Sighting saved:', {
+      id: data.id,
+      time_of_day: data.time_of_day,
+      actual_time: data.actual_time,
+      mapped_actualTime: sighting.actualTime
+    });
 
     return NextResponse.json(
       { 
