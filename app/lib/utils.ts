@@ -1,3 +1,8 @@
+// Extend globalThis to include our debug flag
+declare global {
+  var _loggedFirstSighting: boolean | undefined;
+}
+
 export interface Sighting {
   date: string;
   latitude: number;
