@@ -88,21 +88,39 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const { data, error } = await supabase
+    // Build insert object - conditionally include actual_time if column exists
+    const insertData: any = {
+      sighting_date: date,
+      latitude: latitude,
+      longitude: longitude,
+      nearest_city: city || 'Unknown',
+      us_state: state || 'Ohio',
+      notes: notes,
+      time_of_day: timeOfDay,
+      tag_of_apparition: type,
+      image_link: '' // No image link from form submission
+    };
+
+    // Try to include actual_time, but handle gracefully if column doesn't exist
+    // First attempt: try with actual_time
+    let { data, error } = await supabase
       .from('ghost_sightings')
       .insert({
-        sighting_date: date,
-        latitude: latitude,
-        longitude: longitude,
-        nearest_city: city || 'Unknown',
-        us_state: state || 'Ohio',
-        notes: notes,
-        time_of_day: timeOfDay,
-        tag_of_apparition: type,
-        image_link: '' // No image link from form submission
+        ...insertData,
+        actual_time: time, // Store the actual time entered by the user
       })
       .select()
       .single();
+
+    // If error is about missing column, retry without actual_time
+    if (error && error.message?.includes('actual_time')) {
+      console.warn('actual_time column not found, saving without it. Please run migration 002_add_actual_time_field.sql');
+      ({ data, error } = await supabase
+        .from('ghost_sightings')
+        .insert(insertData)
+        .select()
+        .single());
+    }
 
     if (error) {
       console.error('Database error:', error);

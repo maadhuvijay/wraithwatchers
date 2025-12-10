@@ -20,8 +20,21 @@ export default function SightingPopup({ sighting, onClose }: SightingPopupProps)
     }
   };
 
-  const formatTime = (timeOfDay: string) => {
-    // Convert time of day to a more readable format
+  const formatTime = (timeOfDay: string, actualTime?: string) => {
+    // If we have the actual time, use it and format it nicely
+    if (actualTime) {
+      // Handle TIME format (HH:MM:SS) or HH:MM format
+      const timeParts = actualTime.split(':');
+      const hour = parseInt(timeParts[0], 10);
+      const min = timeParts[1] || '00';
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      // Ensure minutes are always 2 digits
+      const paddedMin = min.padStart(2, '0');
+      return `${displayHour}:${paddedMin} ${period}`;
+    }
+    
+    // Fallback to time of day category if actual time is not available
     const timeMap: Record<string, string> = {
       'Dawn': '5:00 AM',
       'Morning': '8:00 AM',
@@ -58,7 +71,7 @@ export default function SightingPopup({ sighting, onClose }: SightingPopupProps)
         
         <div className="space-y-2 text-black">
           <p><strong>Date of Sighting:</strong> {formatDate(sighting.date)}</p>
-          <p><strong>Time of Sighting:</strong> {formatTime(sighting.timeOfDay)} EST</p>
+          <p><strong>Time of Sighting:</strong> {formatTime(sighting.timeOfDay, sighting.actualTime)} EST</p>
           <p><strong>Type of Sighting:</strong> {sighting.tag}</p>
           <p><strong>Sighting Notes:</strong> {sighting.notes}</p>
         </div>

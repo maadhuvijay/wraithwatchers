@@ -16,6 +16,23 @@ export default function SightingsTable({ sightings }: SightingsTableProps) {
   const endIndex = startIndex + itemsPerPage;
   const currentSightings = sightings.slice(startIndex, endIndex);
 
+  const formatTime = (timeOfDay: string, actualTime?: string) => {
+    // If we have the actual time, use it and format it nicely
+    if (actualTime) {
+      // Handle TIME format (HH:MM:SS) or HH:MM format
+      const timeParts = actualTime.split(':');
+      const hour = parseInt(timeParts[0], 10);
+      const min = timeParts[1] || '00';
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      // Ensure minutes are always 2 digits
+      const paddedMin = min.padStart(2, '0');
+      return `${displayHour}:${paddedMin} ${period}`;
+    }
+    // Fallback to time of day category
+    return timeOfDay;
+  };
+
   const exportData = () => {
     const csv = [
       'Date,City,State,Time,Type,Notes',
@@ -61,7 +78,7 @@ export default function SightingsTable({ sightings }: SightingsTableProps) {
               <tr key={index} className="border-b hover:bg-gray-50">
                 <td className="p-2">{sighting.date}</td>
                 <td className="p-2">{sighting.city}</td>
-                <td className="p-2">{sighting.timeOfDay}</td>
+                <td className="p-2">{formatTime(sighting.timeOfDay, sighting.actualTime)}</td>
                 <td className="p-2">{sighting.tag}</td>
                 <td className="p-2 max-w-xs truncate">{sighting.notes}</td>
               </tr>
@@ -94,6 +111,8 @@ export default function SightingsTable({ sightings }: SightingsTableProps) {
     </div>
   );
 }
+
+
 
 
 

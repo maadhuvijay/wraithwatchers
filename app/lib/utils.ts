@@ -6,6 +6,7 @@ export interface Sighting {
   state: string;
   notes: string;
   timeOfDay: string;
+  actualTime?: string; // The actual time entered by the user (HH:MM format)
   tag: string;
   imageLink: string;
 }
@@ -114,6 +115,7 @@ export function dbRowToSighting(row: any): Sighting {
     state: row.us_state || row.state || '',
     notes: row.notes || '',
     timeOfDay: row.time_of_day || '',
+    actualTime: row.actual_time || undefined, // Map the actual_time field
     tag: row.tag_of_apparition || '',
     imageLink: row.image_link || '',
   };
